@@ -24,7 +24,7 @@ Reproducible, target-verified patches that adapt selected Android game ports to 
 
 ### Games already supporting 4:3
 
-The tested Android versions of **Brotato**, **Dead Cells**, **DREDGE**, and **Thronefall** already render correctly at 4:3 and do not need patches from this project. Thronefall’s UI was not scaled during development; its existing layout was retained.
+The tested Android versions of **Brotato**, **Dead Cells**, **DREDGE**, and **Thronefall** already render correctly at 4:3 and do not need patches from this project.
 
 ## Prerequisites
 
