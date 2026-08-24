@@ -37,6 +37,19 @@ refused rather than patched at a guessed offset.
 Optional third-party branding cleanup is handled by the shared framework. Its
 presence or absence is not required by this module.
 
+## Device workflow verification
+
+On 2026-08-24, the complete experimental workflow was repeated with a
+standalone 617.0 (version code 617) APK whose informational SHA-256 fingerprint
+is `37e95bc195721f3458cc0146a9944a2c55a38c2c3ed41c4e33df4e9266e296af`.
+The source passed a full CRC check, was recognized as original, patched with
+`--allow-experimental`, aligned, signed, re-recognized as patched, installed on
+a physical 1280x960 device, and survived a cold launch.
+
+This confirms the patching, signing, installation, and startup path only. It
+does not change the experimental visual status: the known right-edge shift and
+crop still require manual review and remain expected limitations.
+
 ## Known limitations
 
 - The view remains horizontally shifted and cropped at the right edge.

@@ -36,6 +36,21 @@ If any required layout or camera component is absent, already customized to an
 unknown value, or ambiguous, the input is left untouched instead of applying a
 best guess.
 
+## Device workflow verification
+
+On 2026-08-24, the complete patching workflow was repeated with a standalone
+Android 1.0.2 (version code 11) APK whose informational SHA-256 fingerprint is
+`39ca4588cd3467f387de9ceba4dda3fafc117b05696f4217900bd85087592668`.
+The source passed a full CRC check, was recognized as original, patched,
+aligned, signed, re-recognized as patched, installed on a physical 1280x960
+device, and survived a cold launch.
+
+The device stored this source under a hidden `.pending-` filename even though
+the archive was complete. The filename was not used as evidence of
+compatibility; full archive integrity and semantic target detection were.
+Gameplay framing and visual UI review remain separate from this automated
+build/install check.
+
 ## Known limitations
 
 - Opening movies fill 4:3 by cropping their left and right edges.
