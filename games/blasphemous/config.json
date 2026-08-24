@@ -1,0 +1,31 @@
+{
+  "id": "blasphemous",
+  "name": "Blasphemous",
+  "display_name": "Blasphemous",
+  "package": "com.thegamekitchen.blasphemousmobile",
+  "package_names": [
+    "com.thegamekitchen.blasphemousmobile"
+  ],
+  "engine": "Unity IL2CPP",
+  "status": "verified",
+  "experimental": false,
+  "output_name": "Blasphemous-4x3.apk",
+  "required_entries": [
+    "assets/bin/Data/datapack.unity3d",
+    "lib/arm64-v8a/libil2cpp.so"
+  ],
+  "tested_versions": [
+    "1.9.0 (38)"
+  ],
+  "features": [
+    "expanded 640x480 compositor and render textures",
+    "4:3 gameplay camera without changing tablet-mode detection",
+    "4:3 UI reference height and output quads",
+    "achievement popup hidden-state re-anchor"
+  ],
+  "compatibility": {
+    "strategy": "semantic Unity hierarchy/value matching and unique contextual ARM64 instruction patterns",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false
+  }
+}

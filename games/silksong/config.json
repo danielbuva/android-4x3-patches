@@ -1,0 +1,29 @@
+{
+  "id": "silksong",
+  "name": "silksong",
+  "display_name": "Hollow Knight: Silksong",
+  "package": "com.game.silksong",
+  "engine": "Unity IL2CPP",
+  "status": "verified",
+  "tested_versions": [
+    "1.2.0 (version code 8)"
+  ],
+  "output_name": "Hollow-Knight-Silksong-4x3.apk",
+  "preferred_entries": [
+    "assets/bin/Data/data.unity3d"
+  ],
+  "entry_globs": [
+    "lib/arm64-v8a/libil2cpp.so",
+    "assets/bin/Data/data.unity3d"
+  ],
+  "features": [
+    "true 4:3 camera viewport with added vertical world view",
+    "4:3 loading-label placement when that launcher UI is present",
+    "optional source-specific watermark hiding"
+  ],
+  "compatibility": {
+    "strategy": "package identity, required entries, contextual AArch64 instructions, and semantic Unity object relationships",
+    "whole_apk_hash_required": false,
+    "branding_cleanup_required": false
+  }
+}

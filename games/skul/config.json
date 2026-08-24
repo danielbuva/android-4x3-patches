@@ -1,0 +1,27 @@
+{
+  "id": "skul",
+  "display_name": "Skul: The Hero Slayer",
+  "package": "com.playdigious.skul",
+  "package_names": [
+    "com.playdigious.skul"
+  ],
+  "engine": "Unity IL2CPP",
+  "status": "verified",
+  "output_name": "Skul-The-Hero-Slayer-4x3.apk",
+  "tested_versions": [
+    "1.0.13 (66)"
+  ],
+  "features": [
+    "640x480 gameplay reference",
+    "1920x1440 UI reference",
+    "expanded 4:3 HUD safe area"
+  ],
+  "required_entries": [
+    "assets/bin/Data/datapack.unity3d"
+  ],
+  "compatibility": {
+    "strategy": "semantic GameBase object names, component layouts, and field values",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false
+  }
+}

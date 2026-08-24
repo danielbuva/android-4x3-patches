@@ -1,0 +1,35 @@
+{
+  "id": "hollow-knight",
+  "display_name": "Hollow Knight",
+  "package": "com.TeamCherry.HollowKnight",
+  "package_names": [
+    "com.TeamCherry.HollowKnight"
+  ],
+  "engine": "Unity IL2CPP",
+  "status": "verified",
+  "output_name": "Hollow-Knight-4x3.apk",
+  "tested_versions": [
+    "1.5.78.11833"
+  ],
+  "features": [
+    "expanded 4:3 world view",
+    "4:3 HUD placement",
+    "top-edge touch-control placement"
+  ],
+  "required_entries": [
+    "assets/bin/Data/data.unity3d"
+  ],
+  "preferred_entries": [
+    "lib/arm64-v8a/libil2cpp.so",
+    "lib/armeabi-v7a/libil2cpp.so"
+  ],
+  "entry_globs": [
+    "lib/arm64-v8a/libil2cpp.so",
+    "lib/armeabi-v7a/libil2cpp.so"
+  ],
+  "compatibility": {
+    "strategy": "semantic Unity hierarchy and unique contextual native constants",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "hotline-miami",
+  "display_name": "Hotline Miami",
+  "package": "com.devolverdigital.hotlinemiami",
+  "package_names": [
+    "com.devolverdigital.hotlinemiami"
+  ],
+  "tested_versions": [
+    "1.0.180 (1000180)"
+  ],
+  "engine": "GameMaker (Undertale bytecode 17)",
+  "status": "verified",
+  "required_entries": [
+    "assets/game.droid"
+  ],
+  "output_name": "Hotline-Miami-4x3.apk",
+  "features": [
+    "400 x 300 gameplay cameras and full-height 4:3 presentation",
+    "Adaptive centered output viewport without stretching",
+    "Expanded mobile GUI height",
+    "Expanded darkness and lighting compositor surfaces"
+  ]
+}

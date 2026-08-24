@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "shin-chan",
+  "name": "shin-chan",
+  "display_name": "Shin Chan: Shiro & Coal Town",
+  "package": "com.crunchyroll.gv.shinchanshiroandcoal.game",
+  "package_names": [
+    "com.crunchyroll.gv.shinchanshiroandcoal.game"
+  ],
+  "engine": "Unity IL2CPP",
+  "status": "verified",
+  "tested_versions": [
+    "1.0.2 (version code 11, arm64-v8a)"
+  ],
+  "module": "patch_impl.py",
+  "required_entries": [],
+  "preferred_entries": [
+    "assets/aa/Android/70b5c8e3a6b61b4c36575520b6171bd2.bundle",
+    "assets/aa/Android/776c9c4756d0465df21aaa0a4c1c42fa.bundle",
+    "assets/aa/Android/a6d851deff04d7b26bf91f33c4602b52.bundle",
+    "assets/aa/Android/38cc20153de5f2c061629579cb58f064.bundle"
+  ],
+  "entry_globs": [
+    "assets/aa/Android/*.bundle"
+  ],
+  "output_name": "Shin-Chan-Shiro-and-Coal-Town-4x3.apk",
+  "features": [
+    "expanded 4:3 perspective gameplay view",
+    "4:3 title and main-menu layouts",
+    "proportional title-art crop",
+    "proportional opening-movie crop without stretching"
+  ],
+  "compatibility": {
+    "strategy": "semantic-target-detection",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "notes": [
+      "Addressables bundles are selected by component types, GameObject names, and neighboring serialized values rather than hashed bundle filename or PathID.",
+      "Source-specific branding cleanup is optional and handled by the shared framework."
+    ]
+  }
+}

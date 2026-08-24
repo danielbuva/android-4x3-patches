@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "sea-of-stars",
+  "name": "sea-of-stars",
+  "display_name": "Sea of Stars",
+  "package": "com.playdigious.seaofstars",
+  "package_names": [
+    "com.playdigious.seaofstars"
+  ],
+  "engine": "Unity IL2CPP",
+  "status": "verified",
+  "tested_versions": [
+    "3.0.60158 (version code 60158, arm64-v8a)"
+  ],
+  "module": "patch_impl.py",
+  "required_entries": [
+    "lib/arm64-v8a/libil2cpp.so"
+  ],
+  "preferred_entries": [
+    "assets/aa/Android/6d3223da354de646ab79d5660dcac9d2.bundle",
+    "assets/aa/Android/ebe33395c1decf71e77c043c3949cd83.bundle",
+    "lib/arm64-v8a/libstub.so"
+  ],
+  "entry_globs": [
+    "assets/aa/Android/*.bundle",
+    "lib/arm64-v8a/libstub.so"
+  ],
+  "output_name": "Sea-of-Stars-4x3.apk",
+  "features": [
+    "640x480 gameplay while retaining the original horizontal view",
+    "4:3 gameplay and UI resolution-controller limits",
+    "4:3 mobile resolution-manager limit",
+    "conditional SurfaceView startup compatibility repair"
+  ],
+  "compatibility": {
+    "strategy": "semantic-target-detection",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "notes": [
+      "Addressables bundles are selected by their Unity objects rather than by hashed bundle filename.",
+      "The native gameplay change uses a unique AArch64 instruction pair with contextual spacing, not a fixed file offset.",
+      "Source-specific branding cleanup is optional and handled by the shared framework."
+    ]
+  }
+}

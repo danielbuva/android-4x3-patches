@@ -1,0 +1,63 @@
+# Game/application packages and generated signatures
+*.apk
+*.apks
+*.xapk
+*.aab
+*.idsig
+*.obb
+*.droid
+*.dex
+*.so
+*.dll
+*.dylib
+*.unity3d
+*.bundle
+*.zip
+
+# Signing material and certificates
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.key
+*.pem
+*.crt
+*.cer
+.env
+.env.*
+!.env.example
+.keystore/
+.android-4x3/
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Generated patch files
+output/
+patched/
+build/
+dist/
+tmp/
+temp/
+.tmp/
+.temp/
+android-4x3-work-*/
+*.log
+*.tmp
+*.orig
+*.bak
+
+# Tool/editor/OS metadata
+.DS_Store
+._*
+Thumbs.db
+.idea/
+.vscode/
+*~

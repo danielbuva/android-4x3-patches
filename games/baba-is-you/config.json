@@ -1,0 +1,23 @@
+{
+  "id": "baba-is-you",
+  "display_name": "Baba Is You",
+  "package_names": [
+    "org.hempuli.baba"
+  ],
+  "engine": "Chowdren (native ARM64)",
+  "status": "experimental",
+  "output_name": "Baba-Is-You-experimental-4x3.apk",
+  "tested_versions": [
+    "617.0 (617)"
+  ],
+  "entry_globs": [],
+  "features": [
+    "854x640 logical game view",
+    "full drawable output behind touch controls",
+    "4:3 Lua layout width",
+    "horizontal camera-origin adjustment"
+  ],
+  "known_limitations": [
+    "The rendered game remains shifted and cropped at the right edge."
+  ]
+}

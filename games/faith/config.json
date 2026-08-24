@@ -1,0 +1,23 @@
+{
+  "id": "faith",
+  "display_name": "FAITH: The Unholy Trinity",
+  "package": "com.airdorf.faiththeunholytrinityunofficialandroidportbyplayer1444",
+  "package_names": [
+    "com.airdorf.faiththeunholytrinityunofficialandroidportbyplayer1444"
+  ],
+  "tested_versions": [
+    "1.0.0 (1000000)"
+  ],
+  "engine": "GameMaker (Undertale bytecode 17)",
+  "status": "verified",
+  "required_entries": [
+    "assets/game.droid"
+  ],
+  "output_name": "FAITH-The-Unholy-Trinity-4x3.apk",
+  "features": [
+    "Centered 1440 x 1080 game camera without decorative side art",
+    "Largest centered 4:3 output viewport without stretching",
+    "Persistent touch-control visibility option, hidden by default",
+    "Right-side touch controls migrated into the 4:3 GUI area"
+  ]
+}

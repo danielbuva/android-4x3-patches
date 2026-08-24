@@ -1,0 +1,26 @@
+{
+  "id": "vampire-survivors",
+  "name": "vampire-survivors",
+  "display_name": "Vampire Survivors",
+  "package": "com.poncle.vampiresurvivors",
+  "engine": "Unity IL2CPP",
+  "status": "verified",
+  "tested_versions": [
+    "1.15.115 (version code 64958511)"
+  ],
+  "output_name": "Vampire-Survivors-4x3.apk",
+  "entry_globs": [
+    "assets/bin/Data/datapack.unity3d",
+    "lib/arm64-v8a/libil2cpp.so"
+  ],
+  "features": [
+    "remove the forced 16:10 UI safe area",
+    "prevent the translucent aspect mask from covering the 4:3 world",
+    "place responsive UI at the physical top and bottom edges"
+  ],
+  "compatibility": {
+    "strategy": "package identity, required entries, semantic Unity component relationships, and contextual AArch64 instructions",
+    "whole_apk_hash_required": false,
+    "branding_cleanup_required": false
+  }
+}
