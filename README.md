@@ -2,6 +2,8 @@
 
 Reproducible, target-verified patches that adapt selected Android game ports to a 4:3 display without stretching, squashing, or simply cropping a widescreen frame. Where the game permits it, the patches preserve horizontal coverage and reveal additional vertical game area, then adjust UI placement for the taller view.
 
+> New here? Start with the [step-by-step APK patching guide](PATCHING_GUIDE.md).
+
 > [!IMPORTANT]
 > This repository contains no games or APKs. You must supply your own lawfully obtained APK. It is an unofficial community project and is not affiliated with, authorized by, or endorsed by any game developer, publisher, platform holder, or Android distributor.
 
