@@ -32,7 +32,7 @@ The tested Android versions of **Brotato**, **Dead Cells**, **DREDGE**, and **Th
 
 - Python 3.11 or newer
 - Java/JDK 17 or newer (`keytool`)
-- Android SDK Build Tools (`zipalign` and `apksigner`)
+- A current Android SDK Build Tools release (`zipalign` and `apksigner`; tested with 36.0.0)
 - Python packages from `requirements.txt`
 - For FAITH and Hotline Miami: UndertaleModTool CLI (tested with 0.9.1.2), available as `UndertaleModCli` on `PATH` or through `ANDROID_4X3_UMT`/`UMT_CLI`
 
@@ -114,6 +114,7 @@ adb install "/path/to/Game-4x3.apk"
 
 - **Unsupported or ambiguous target:** the APK revision changed a required structure. Run `--check --json` and include that report in a compatibility contribution; do not weaken target cardinality checks.
 - **`zipalign` or `apksigner` missing:** install Android SDK Build Tools and set `ANDROID_SDK_ROOT` or add the tools to `PATH`.
+- **CRC verification failed:** the supplied APK is corrupt or incomplete. Obtain a clean copy; do not force the patch.
 - **UndertaleModTool missing:** set `ANDROID_4X3_UMT` to the CLI executable for FAITH or Hotline Miami.
 - **Signature conflict:** read the signing section before uninstalling anything.
 - **Baba output is cropped:** this is the documented experimental limitation, not a signing or installation fault.

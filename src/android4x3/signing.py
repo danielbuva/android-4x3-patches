@@ -246,6 +246,8 @@ def _sign_with_files(
             f"file:{password_file}",
             "--key-pass",
             f"file:{key_password_file}",
+            "--alignment-preserved",
+            "true",
             "--out",
             str(signed),
             str(aligned),

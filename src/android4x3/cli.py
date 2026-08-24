@@ -154,6 +154,10 @@ def run(argv: list[str] | None = None) -> int:
     input_apk = args.input_apk.expanduser().resolve()
     if not input_apk.is_file():
         raise PatchError(f"input APK not found: {input_apk}")
+    # A target-only probe can succeed even when an unrelated archive member is
+    # corrupt. Verify the complete user-supplied APK before doing any work so
+    # --check is an honest preflight for the eventual rebuild.
+    verify_zip(input_apk, full=True, allow_signatures=True)
     manifest = inspect_apk(input_apk)
     config = registry.by_package.get(manifest.package)
     if config is None:

@@ -232,4 +232,4 @@ def verify_zip(path: Path, *, full: bool = False, allow_signatures: bool = False
             if not allow_signatures and any(name.upper().startswith("META-INF/") and name.upper().endswith((".RSA", ".DSA", ".EC", ".SF", "MANIFEST.MF")) for name in archive.namelist()):
                 raise PatchError("stale v1 signing records remain after repacking")
     except zipfile.BadZipFile as exc:
-        raise PatchError("rebuilt APK is not a valid ZIP archive") from exc
+        raise PatchError("APK is not a valid ZIP archive") from exc

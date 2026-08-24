@@ -154,7 +154,14 @@ def test_generated_identity_signs_and_verifies_synthetic_apk(
     unsigned = make_apk(
         tmp_path / "unsigned.apk",
         manifest=binary_manifest("org.example.signed", "1.0", 1),
-        entries=[("assets/data.bin", b"synthetic", zipfile.ZIP_STORED)],
+        entries=[
+            ("assets/data.bin", b"synthetic", zipfile.ZIP_STORED),
+            (
+                "lib/arm64-v8a/libsynthetic.so",
+                b"synthetic native library payload",
+                zipfile.ZIP_STORED,
+            ),
+        ],
     )
     aligned = tmp_path / "aligned.apk"
     signed = tmp_path / "signed.apk"
@@ -167,3 +174,28 @@ def test_generated_identity_signs_and_verifies_synthetic_apk(
     verify_zip(signed, full=True, allow_signatures=True)
     assert signed.is_file()
     assert (tmp_path / "user signing state" / "signing.p12").is_file()
+
+
+def test_sign_command_preserves_zipalign_layout(tmp_path: Path, monkeypatch) -> None:
+    captured: list[list[str]] = []
+    apksigner = tmp_path / "apksigner"
+    credentials = tmp_path / "credentials"
+    credentials.mkdir()
+    password_file = credentials / "password.txt"
+    password_file.write_text("secret\n", encoding="utf-8")
+
+    monkeypatch.setattr(signing, "_run", lambda command, **_kwargs: captured.append(command) or "")
+
+    signing._sign_with_files(
+        apksigner,
+        tmp_path / "aligned.apk",
+        tmp_path / "signed.apk",
+        tmp_path / "signing.p12",
+        "android4x3",
+        password_file,
+        password_file,
+    )
+
+    assert "--alignment-preserved" in captured[0]
+    option = captured[0].index("--alignment-preserved")
+    assert captured[0][option + 1] == "true"

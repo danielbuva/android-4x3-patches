@@ -14,11 +14,29 @@ Install these before continuing:
 
 - Python 3.11 or newer
 - Java/JDK 17 or newer
-- Android SDK Build Tools, including `zipalign` and `apksigner`
+- A current Android SDK Build Tools release, including `zipalign` and `apksigner` (tested with 36.0.0)
 
 The easiest cross-platform way to obtain the Android tools is Android Studio: open **SDK Manager**, install the current **Android SDK Build-Tools**, and make sure the Android SDK location is available through `ANDROID_SDK_ROOT` or `ANDROID_HOME`. The patcher also searches common SDK locations and your command path.
 
 FAITH and Hotline Miami additionally need UndertaleModTool CLI 0.9.1.2 or newer. Put `UndertaleModCli` on your command path, or set `ANDROID_4X3_UMT` to its executable path.
+
+On macOS or Linux, you can set it for the current terminal like this:
+
+```sh
+export ANDROID_4X3_UMT="/path/to/UndertaleModCli"
+```
+
+In Windows Command Prompt:
+
+```bat
+set "ANDROID_4X3_UMT=C:\path\to\UndertaleModCli.exe"
+```
+
+In Windows PowerShell:
+
+```powershell
+$env:ANDROID_4X3_UMT = "C:\path\to\UndertaleModCli.exe"
+```
 
 ## 2. Download the patcher
 
@@ -45,7 +63,23 @@ py -3 -m venv .venv
 
 You only need to do this setup once per copy of the repository. Later, open a terminal in this folder and run the patch command below.
 
-## 3. Check your APK first
+## 3. Copy the APK from Android, if necessary
+
+Skip this step if the APK is already on the computer. If it is in a connected Android device's Download folder, first list the available files:
+
+```sh
+adb shell ls -la /sdcard/Download
+```
+
+Then copy the selected file to the current folder:
+
+```sh
+adb pull "/sdcard/Download/Your Game.apk" "./Your Game.apk"
+```
+
+A filename beginning with `.pending-` may indicate an unfinished download. Wait for the download to finish when possible. The next step reads every APK entry and will reject incomplete or corrupt files with a CRC error.
+
+## 4. Check your APK first
 
 Use `--check` before making an output. Replace the example path with your own APK path; quotation marks allow spaces in filenames.
 
@@ -61,9 +95,9 @@ Use `--check` before making an output. Replace the example path with your own AP
 patch.bat --check "C:\path\to\Your Game.apk"
 ```
 
-If the result says `Compatibility: original` or `Compatibility: already patched`, continue. If it says `unsupported` or `ambiguous`, that APK revision is not safely recognizable; do not try to force it.
+If the result says `Compatibility: original` or `Compatibility: already patched`, continue. If it says `unsupported` or `ambiguous`, that APK revision is not safely recognizable; do not try to force it. A CRC failure means the APK itself is incomplete or corrupt and should be obtained again from a clean source.
 
-## 4. Create the patched APK
+## 5. Create the patched APK
 
 Run the same command without `--check`.
 
@@ -93,7 +127,7 @@ To choose an output location yourself, add `--output` before the APK path:
 ./patch.sh --output "/path/to/output/Game-4x3.apk" "/path/to/Your Game.apk"
 ```
 
-## 5. Install on your Android device
+## 6. Install on your Android device
 
 After connecting a device with USB debugging enabled, install the new file:
 
@@ -118,6 +152,8 @@ The patcher preserves cloud saves, Play Games, billing, purchases, and unrelated
 | What you see | What to do |
 |---|---|
 | `zipalign` or `apksigner` is missing | Install Android SDK Build Tools and set `ANDROID_SDK_ROOT` or `ANDROID_HOME` if necessary. |
+| `apksigner` does not recognize `--alignment-preserved` | Update Android SDK Build Tools to a current release. |
+| `CRC verification failed` | The APK is incomplete or corrupt. Obtain a clean copy instead of forcing the patch. |
 | `UndertaleModTool` is missing | Install its CLI for FAITH or Hotline Miami, then set `ANDROID_4X3_UMT` to it. |
 | `unsupported` or `ambiguous` | Your APK build has changed a required target. It is not safe to patch with this release. |
 | Android rejects installation | The installed app has a different signing key. Back up saves before replacing it. |

@@ -208,3 +208,20 @@ def test_main_emits_machine_readable_json_for_failures(
     payload = json.loads(captured.out)
     assert payload["status"] == "error"
     assert "input APK not found" in payload["error"]
+
+
+def test_check_rejects_corrupt_unrelated_apk_entry(
+    tmp_path: Path, make_apk, text_manifest
+) -> None:
+    apk = make_apk(
+        tmp_path / "corrupt.apk",
+        manifest=text_manifest("unsupported.package"),
+        entries=[("assets/unrelated.bin", b"uncorrupted", zipfile.ZIP_STORED)],
+    )
+    data = bytearray(apk.read_bytes())
+    marker = data.index(b"uncorrupted")
+    data[marker] ^= 0x01
+    apk.write_bytes(data)
+
+    with pytest.raises(PatchError, match="CRC verification failed"):
+        cli.run(["--check", str(apk)])
