@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "huntdown",
+  "name": "huntdown",
+  "display_name": "Huntdown",
+  "package": "com.coffeestain.huntdown",
+  "package_names": [
+    "com.coffeestain.huntdown"
+  ],
+  "engine": "Unity IL2CPP",
+  "status": "experimental",
+  "tested_versions": [
+    "0.1 (version code 200040, source build b200040, arm64-v8a)"
+  ],
+  "module": "patch_impl.py",
+  "required_entries": [
+    "lib/arm64-v8a/libil2cpp.so"
+  ],
+  "preferred_entries": [
+    "classes3.dex",
+    "assets/data0"
+  ],
+  "entry_globs": [],
+  "output_name": "Huntdown-v0.1-b200040-4x3.apk",
+  "features": [
+    "native 320x240 4:3 logical view at 640x480 without the force169 override",
+    "4:3 intro and story videos use proportional vertical fit with centered side crop",
+    "recognized analytics login and server-send coroutines disabled opportunistically",
+    "recognized distributor-injected player preferences and extractor removed opportunistically"
+  ],
+  "known_limitations": [
+    "The 4:3 result is structurally verified but has not yet been visually verified on the target device.",
+    "The target Android surface must actually be 4:3 for the computed 320x240 view and zero offsets."
+  ],
+  "compatibility": {
+    "strategy": "required arm64 4:3 instruction signatures and ELF mapping; source-specific cleanup is optional",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "notes": [
+      "classes3.dex and assets/data0 are never required: recognized injected copies are neutralized, absent copies are ignored, and unknown copies are preserved.",
+      "The shared optional branding cleanup remains responsible for recognized APKVision runtime wrappers.",
+      "Billing, purchases, cloud saves, platform authentication, achievements, and Play Games are preserved."
+    ]
+  }
+}

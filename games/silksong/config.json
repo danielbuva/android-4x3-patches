@@ -9,6 +9,9 @@
     "1.2.0 (version code 8)"
   ],
   "output_name": "Hollow-Knight-Silksong-4x3.apk",
+  "required_entries": [
+    "lib/arm64-v8a/libil2cpp.so"
+  ],
   "preferred_entries": [
     "assets/bin/Data/data.unity3d"
   ],

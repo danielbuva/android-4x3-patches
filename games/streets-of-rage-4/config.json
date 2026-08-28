@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "streets-of-rage-4",
+  "name": "streets-of-rage-4",
+  "display_name": "Streets of Rage 4",
+  "package": "com.playdigious.sor4",
+  "package_names": [
+    "com.playdigious.sor4"
+  ],
+  "engine": "Xamarin/.NET MonoGame",
+  "status": "verified",
+  "tested_versions": [
+    "1.4.5 (version code 91, arm64-v8a)"
+  ],
+  "module": "patch_impl.py",
+  "required_entries": [
+    "lib/arm64-v8a/libassemblies.arm64-v8a.blob.so",
+    "assets/bigfile",
+    "assets/videos/game_intro.mp4",
+    "assets/videos/game_intro_logos.mp4",
+    "assets/videos/max_boss_intro.mp4",
+    "assets/videos/playdigious.mp4",
+    "assets/videos/stage10_intro.mp4",
+    "assets/videos/stage11_intro.mp4",
+    "assets/videos/stage12_intro.mp4",
+    "assets/videos/stage1_intro.mp4",
+    "assets/videos/stage1_intro_bk.mp4",
+    "assets/videos/stage2_intro.mp4",
+    "assets/videos/stage3_intro.mp4",
+    "assets/videos/stage4_intro.mp4",
+    "assets/videos/stage5_intro.mp4",
+    "assets/videos/stage6_intro.mp4",
+    "assets/videos/stage7_intro.mp4",
+    "assets/videos/stage8_intro.mp4",
+    "assets/videos/stage9_intro.mp4"
+  ],
+  "preferred_entries": [],
+  "entry_globs": [],
+  "output_name": "Streets-of-Rage-4-4x3.apk",
+  "features": [
+    "Vert+ perspective camera retaining the original horizontal world view",
+    "4:3 render targets, preloading screen, menus, and HUD calculations",
+    "1920x1440 default GUI canvas and expanded camera/culling height",
+    "mobile top/bottom/side filler artwork suppressed at both presentation draw sites",
+    "title artwork and main-menu background center-cropped to fill 4:3 while controls remain width-fit",
+    "proportional 4:3 center crop for all intro and stage videos",
+    "isolated More Games analytics event suppressed while Firebase services remain initialized"
+  ],
+  "known_limitations": [
+    "Other serialized menu roots or per-stage camera values may require follow-up adjustments.",
+    "Intro videos are re-encoded and require ffmpeg/ffprobe with libx264."
+  ],
+  "compatibility": {
+    "strategy": "canonical SOR4.dll fingerprint, strict XABA/XALZ and bigfile structure validation, loose named-record GUI detection with exact before/after contexts, and decoded video properties",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "notes": [
+      "The managed target is intentionally locked to the audited 1.4.5 binary; the complete APK, signer, and source are not compatibility gates.",
+      "Recognized mixed display states are completed; the optional analytics-cleanup range is non-gating and unfamiliar bytes there are preserved.",
+      "The bigfile is not whole-file hash gated: exactly one named GuiNodeData record and one exact original/patched context are required for each background target, while all other records are preserved.",
+      "APKVision cleanup remains optional and is handled by the shared framework.",
+      "FirebaseApp/provider initialization, Remote Config, billing, cloud saves, Play Games, EOS, More Games, and support components are preserved."
+    ]
+  }
+}

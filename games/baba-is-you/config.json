@@ -10,6 +10,9 @@
   "tested_versions": [
     "617.0 (617)"
   ],
+  "required_entries": [
+    "lib/arm64-v8a/libChowdren.so"
+  ],
   "entry_globs": [],
   "features": [
     "854x640 logical game view",

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "death-road-to-canada",
+  "name": "death-road-to-canada",
+  "display_name": "Death Road to Canada",
+  "package": "com.noodlecake.drtc",
+  "package_names": [
+    "com.noodlecake.drtc"
+  ],
+  "engine": "Deathforth / SDL2",
+  "status": "experimental",
+  "tested_versions": [
+    "1.8.2 (version code 57, arm64-v8a + armeabi-v7a)"
+  ],
+  "module": "patch_impl.py",
+  "required_entries": [
+    "classes.dex",
+    "res/drawable-xxhdpi-v4/splash.png"
+  ],
+  "preferred_entries": [
+    "lib/*/libmain.so"
+  ],
+  "entry_globs": [],
+  "output_name": "Death-Road-to-Canada-4x3.apk",
+  "features": [
+    "480x360 logical rendering for intro, menus, gameplay, camera, and touch mapping",
+    "4:3 center-cropped Android splash without stretching",
+    "Flurry analytics initialization, lifecycle, user-id, and event cleanup",
+    "disabled More Games website cross-promotion"
+  ],
+  "compatibility": {
+    "strategy": "exact-native-plus-semantic-dex",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "notes": [
+      "Arm64-v8a, armeabi-v7a, or both are supported; every present libmain.so is inspected and any unrecognized ABI fails closed.",
+      "Native edits are constrained by ELF mapping, canonical SHA-256, and exact original-or-patched instruction bytes.",
+      "Flurry methods are selected by complete DEX class, method, and descriptor identities.",
+      "Play Games and license checks are preserved; source-specific branding remains framework-owned."
+    ]
+  }
+}

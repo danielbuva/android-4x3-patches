@@ -4,7 +4,7 @@ This guide turns a game APK you already own into a separately signed 4:3 APK. It
 
 ## Before you begin
 
-1. Confirm that your game appears in the [supported-patches table](README.md#supported-patches). Baba Is You is experimental and requires the extra command shown below.
+1. Confirm that your game appears in the [supported-patches table](README.md#supported-patches). Every row labeled **Experimental** requires `--allow-experimental`; this acknowledges its visual-testing status without bypassing compatibility checks.
 2. Keep a copy of your original APK somewhere safe. This project does not provide game APKs.
 3. Back up any important saves before installing a patched build. A patched APK is signed with your own local key, so Android may require you to uninstall a differently signed existing installation. Uninstalling can erase private app data.
 
@@ -12,13 +12,15 @@ This guide turns a game APK you already own into a separately signed 4:3 APK. It
 
 Install these before continuing:
 
+- Git, for downloading and updating this repository
 - Python 3.11 or newer
 - Java/JDK 17 or newer
 - A current Android SDK Build Tools release, including `zipalign` and `apksigner` (tested with 36.0.0)
+- Android SDK Platform Tools (`adb`) if you want to copy from or install to a USB-connected device
 
 The easiest cross-platform way to obtain the Android tools is Android Studio: open **SDK Manager**, install the current **Android SDK Build-Tools**, and make sure the Android SDK location is available through `ANDROID_SDK_ROOT` or `ANDROID_HOME`. The patcher also searches common SDK locations and your command path.
 
-FAITH and Hotline Miami additionally need UndertaleModTool CLI 0.9.1.2 or newer. Put `UndertaleModCli` on your command path, or set `ANDROID_4X3_UMT` to its executable path.
+Advent Neon, FAITH, and Hotline Miami additionally need UndertaleModTool CLI 0.9.1.2 or newer. Advent Neon was tested with 0.9.2.0. Put `UndertaleModCli` on your command path, or set `ANDROID_4X3_UMT` to its executable path.
 
 On macOS or Linux, you can set it for the current terminal like this:
 
@@ -37,6 +39,8 @@ In Windows PowerShell:
 ```powershell
 $env:ANDROID_4X3_UMT = "C:\path\to\UndertaleModCli.exe"
 ```
+
+Streets of Rage 4 additionally needs `ffmpeg` and `ffprobe` on your command path, with an FFmpeg build that includes the `libx264` encoder.
 
 ## 2. Download the patcher
 
@@ -115,6 +119,24 @@ patch.bat "C:\path\to\Your Game.apk"
 
 The patcher reports the output location when it finishes. By default it is placed in the repository's `output` folder and named like `Game-4x3.apk`.
 
+For any game labeled **Experimental**, add the acknowledgement flag before the input path:
+
+```sh
+./patch.sh --allow-experimental "/path/to/Your Game.apk"
+```
+
+On Windows, the equivalent is:
+
+```bat
+patch.bat --allow-experimental "C:\path\to\Your Game.apk"
+```
+
+For Advent Neon, acknowledge that device-side visual iteration is still pending:
+
+```sh
+./patch.sh --allow-experimental "/path/to/Advent-Neon.apk"
+```
+
 For Baba Is You, acknowledge its known right-edge cropping defect explicitly:
 
 ```sh
@@ -133,6 +155,20 @@ After connecting a device with USB debugging enabled, install the new file:
 
 ```sh
 adb install "/path/to/Game-4x3.apk"
+```
+
+If a very large APK fails during streamed installation, use Android's
+non-streaming transfer mode:
+
+```sh
+adb install --no-streaming "/path/to/Game-4x3.apk"
+```
+
+Use `-r` only when replacing an installed copy that was signed with the same
+locally generated key (or the same custom key):
+
+```sh
+adb install -r --no-streaming "/path/to/Game-4x3.apk"
 ```
 
 If Android reports a signature conflict, do **not** immediately uninstall the old app. First back up any saves you care about. Once that is done, remove the old differently signed installation through Android and install the patched APK again. Whether cloud saves restore depends on the game and the account you use.
@@ -154,9 +190,10 @@ The patcher preserves cloud saves, Play Games, billing, purchases, and unrelated
 | `zipalign` or `apksigner` is missing | Install Android SDK Build Tools and set `ANDROID_SDK_ROOT` or `ANDROID_HOME` if necessary. |
 | `apksigner` does not recognize `--alignment-preserved` | Update Android SDK Build Tools to a current release. |
 | `CRC verification failed` | The APK is incomplete or corrupt. Obtain a clean copy instead of forcing the patch. |
-| `UndertaleModTool` is missing | Install its CLI for FAITH or Hotline Miami, then set `ANDROID_4X3_UMT` to it. |
+| `UndertaleModTool` is missing | Install its CLI for Advent Neon, FAITH, or Hotline Miami, then set `ANDROID_4X3_UMT` to it. |
 | `unsupported` or `ambiguous` | Your APK build has changed a required target. It is not safe to patch with this release. |
 | Android rejects installation | The installed app has a different signing key. Back up saves before replacing it. |
 | Baba Is You is still cut off | This is the documented experimental limitation. |
+| Advent Neon shows unfinished room edges or framing | Its initial 4:3 pass is structurally verified but still requires device-side visual iteration. |
 
 For machine-readable diagnostics, use `--check --json`. For all commands, see the [main README](README.md#useful-commands).

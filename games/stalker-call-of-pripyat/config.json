@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "stalker-call-of-pripyat",
+  "name": "stalker-call-of-pripyat",
+  "display_name": "STALKER: Call of Pripyat Mobile",
+  "package": "com.Death13.S.T.A.L.K.E.R.CallofPripyat",
+  "package_names": [
+    "com.Death13.S.T.A.L.K.E.R.CallofPripyat"
+  ],
+  "engine": "Unity 2021.3 IL2CPP",
+  "status": "experimental",
+  "tested_versions": [
+    "0.3 (version code 1, arm64-v8a and armeabi-v7a)"
+  ],
+  "module": "patch_impl.py",
+  "required_entries": [
+    "assets/bin/Data/data.unity3d"
+  ],
+  "preferred_entries": [
+    "lib/arm64-v8a/libil2cpp.so",
+    "lib/armeabi-v7a/libil2cpp.so"
+  ],
+  "entry_globs": [],
+  "output_name": "STALKER-Call-of-Pripyat-4x3.apk",
+  "features": [
+    "4:3 low, medium, and high render-resolution tiers",
+    "expanded-vertical perspective gameplay and menu cameras",
+    "4:3 main, pause, and author UI reference canvases",
+    "matching resolution labels",
+    "optional guarded VK promo-button hiding"
+  ],
+  "compatibility": {
+    "strategy": "Unity-hierarchy-components-and-native-instruction-regions",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "notes": [
+      "Unity objects are selected by full hierarchy path, component type, and MonoScript identity rather than PathID.",
+      "At least one audited ABI must be present; every present audited ABI must expose one guarded three-tier GameSettings.DropVideoQuality instruction region.",
+      "Core compatibility excludes optional source-specific VK cleanup and informational intro invariants.",
+      "The shared optional branding cleanup remains responsible for recognized APKVision runtime wrappers; this source has none."
+    ]
+  }
+}

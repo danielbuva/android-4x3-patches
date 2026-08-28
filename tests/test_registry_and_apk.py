@@ -18,22 +18,46 @@ def test_publishable_registry_loads_every_declared_game_module() -> None:
     registry = Registry(REPO_ROOT / "games")
 
     assert {game.id for game in registry.games} == {
+        "advent-neon",
+        "am2r",
         "baba-is-you",
         "blasphemous",
+        "children-of-morta",
+        "death-road-to-canada",
+        "dusklight",
         "faith",
+        "grimvalor",
         "hollow-knight",
         "hotline-miami",
+        "huntdown",
+        "rogue-legacy",
         "sea-of-stars",
         "shin-chan",
         "silksong",
         "skul",
+        "stalker-call-of-pripyat",
+        "streets-of-rage-4",
         "vampire-survivors",
     }
     for game in registry.games:
         module = registry.module(game)
         assert isinstance(module.REQUIRED_ENTRIES, tuple)
+        assert module.REQUIRED_ENTRIES == game.required_entries
         assert callable(module.probe)
         assert callable(module.apply)
+
+    assert registry.by_id["advent-neon"].experimental is True
+    assert registry.by_id["am2r"].experimental is True
+
+
+def test_root_readme_lists_every_registered_game() -> None:
+    registry = Registry(REPO_ROOT / "games")
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+
+    for game in registry.games:
+        assert f"| {game.display_name} |" in readme
+        for package in game.package_names:
+            assert f"`{package}`" in readme
 
 
 def test_registry_loads_config_and_module_states(tmp_path: Path, make_synthetic_game) -> None:
@@ -73,6 +97,207 @@ def test_registry_rejects_duplicate_packages(tmp_path: Path, make_synthetic_game
         Registry(repo / "games")
 
 
+@pytest.mark.parametrize("output_name", ["invalid-output.bin", "misleading.apks"])
+def test_registry_rejects_invalid_output_name(
+    tmp_path: Path, output_name: str
+) -> None:
+    game = tmp_path / "games" / "invalid"
+    game.mkdir(parents=True)
+    (game / "config.json").write_text(
+        json.dumps(
+            {
+                "id": "invalid",
+                "display_name": "Invalid",
+                "package_names": ["org.example.invalid"],
+                "output_name": output_name,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (game / "patch_impl.py").write_text(
+        "REQUIRED_ENTRIES = ()\n"
+        "def probe(extracted): return {'state':'unsupported'}\n"
+        "def apply(extracted, output_dir): return {}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PatchError, match="output_name must end with \\.apk"):
+        Registry(tmp_path / "games")
+
+
+@pytest.mark.parametrize(
+    "output_name",
+    [
+        "../../outside.apk",
+        "/tmp/out.apk",
+        r"..\\outside.apk",
+        r"C:\\Users\\example\\out.apk",
+        "nested/output.apk",
+    ],
+)
+def test_registry_rejects_output_name_path_traversal(
+    tmp_path: Path, output_name: str
+) -> None:
+    game = tmp_path / "games" / "unsafe-output"
+    game.mkdir(parents=True)
+    (game / "config.json").write_text(
+        json.dumps(
+            {
+                "id": "unsafe-output",
+                "display_name": "Unsafe Output",
+                "package_names": ["org.example.unsafeoutput"],
+                "output_name": output_name,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (game / "patch_impl.py").write_text(
+        "REQUIRED_ENTRIES = ()\n"
+        "def probe(extracted): return {'state':'unsupported'}\n"
+        "def apply(extracted, output_dir): return {}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PatchError, match="output_name must be a plain filename"):
+        Registry(tmp_path / "games")
+
+
+def test_registry_rejects_empty_tested_versions(tmp_path: Path) -> None:
+    game = tmp_path / "games" / "invalid-tested-empty"
+    game.mkdir(parents=True)
+    (game / "config.json").write_text(
+        json.dumps(
+            {
+                "id": "invalid-tested-empty",
+                "display_name": "Invalid Tested Versions",
+                "package_names": ["org.example.invalidtestedempty"],
+                "status": "verified",
+                "output_name": "invalid-tested-empty-4x3.apk",
+                "tested_versions": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (game / "patch_impl.py").write_text(
+        "REQUIRED_ENTRIES = ()\n"
+        "def probe(extracted): return {'state':'unsupported'}\n"
+        "def apply(extracted, output_dir): return {}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PatchError, match="tested_versions must be a non-empty list of non-empty strings"):
+        Registry(tmp_path / "games")
+
+
+def test_registry_rejects_invalid_status_and_experimental(tmp_path: Path) -> None:
+    game = tmp_path / "games" / "invalid-status"
+    game.mkdir(parents=True)
+    (game / "config.json").write_text(
+        json.dumps(
+            {
+                "id": "invalid-status",
+                "display_name": "Invalid Status",
+                "package_names": ["org.example.invalidstatus"],
+                "status": "experimental",
+                "experimental": False,
+                "output_name": "invalid-status-4x3.apk",
+                "tested_versions": ["1.0"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (game / "patch_impl.py").write_text(
+        "REQUIRED_ENTRIES = ()\n"
+        "def probe(extracted): return {'state':'unsupported'}\n"
+        "def apply(extracted, output_dir): return {}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PatchError, match="status and experimental are inconsistent"):
+        Registry(tmp_path / "games")
+
+
+def test_registry_rejects_invalid_tested_versions_shape(tmp_path: Path) -> None:
+    game = tmp_path / "games" / "invalid-tested"
+    game.mkdir(parents=True)
+    (game / "config.json").write_text(
+        json.dumps(
+            {
+                "id": "invalid-tested",
+                "display_name": "Invalid Tested Versions",
+                "package_names": ["org.example.invalidtested"],
+                "status": "verified",
+                "output_name": "invalid-tested-4x3.apk",
+                "tested_versions": "",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (game / "patch_impl.py").write_text(
+        "REQUIRED_ENTRIES = ()\n"
+        "def probe(extracted): return {'state':'unsupported'}\n"
+        "def apply(extracted, output_dir): return {}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PatchError, match="tested_versions must be a list"):
+        Registry(tmp_path / "games")
+
+
+def test_registry_accepts_experimental_inferred_from_flag(tmp_path: Path) -> None:
+    game = tmp_path / "games" / "inferred-experimental"
+    game.mkdir(parents=True)
+    (game / "config.json").write_text(
+        json.dumps(
+            {
+                "id": "inferred-experimental",
+                "display_name": "Inferred Experimental",
+                "package_names": ["org.example.inferredexperimental"],
+                "experimental": True,
+                "output_name": "inferred-experimental-4x3.apk",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (game / "patch_impl.py").write_text(
+        "REQUIRED_ENTRIES = ()\n"
+        "def probe(extracted): return {'state':'unsupported'}\n"
+        "def apply(extracted, output_dir): return {}\n",
+        encoding="utf-8",
+    )
+
+    registry = Registry(tmp_path / "games")
+    assert registry.by_id["inferred-experimental"].status == "experimental"
+
+
+def test_registry_rejects_non_matching_required_entries_type(tmp_path: Path) -> None:
+    game = tmp_path / "games" / "invalid-required"
+    game.mkdir(parents=True)
+    (game / "config.json").write_text(
+        json.dumps(
+            {
+                "id": "invalid-required",
+                "display_name": "Invalid Required",
+                "package_names": ["org.example.invalidrequired"],
+                "status": "verified",
+                "output_name": "invalid-required-4x3.apk",
+                "required_entries": ["valid", 123],
+                "tested_versions": ["1.0"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (game / "patch_impl.py").write_text(
+        "REQUIRED_ENTRIES = ()\n"
+        "def probe(extracted): return {'state':'unsupported'}\n"
+        "def apply(extracted, output_dir): return {}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PatchError, match="required_entries must be a non-empty list of non-empty strings"):
+        Registry(tmp_path / "games")
+
+
 def test_registry_rejects_module_missing_required_exports(tmp_path: Path) -> None:
     game = tmp_path / "games" / "incomplete"
     game.mkdir(parents=True)
@@ -82,6 +307,8 @@ def test_registry_rejects_module_missing_required_exports(tmp_path: Path) -> Non
                 "id": "incomplete",
                 "display_name": "Incomplete",
                 "package_names": ["org.example.incomplete"],
+                "output_name": "incomplete-4x3.apk",
+                "tested_versions": ["1.0"],
             }
         ),
         encoding="utf-8",

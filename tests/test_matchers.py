@@ -94,14 +94,16 @@ def test_silksong_probe_never_inspects_optional_watermark(monkeypatch) -> None:
     ("patched_code", "original_code", "expected"),
     [(1, 0, "original"), (0, 1, "patched"), (0, 0, "ambiguous"), (1, 1, "unsupported")],
 )
+@pytest.mark.parametrize("game_id", ["advent-neon", "faith"])
 def test_gamemaker_orchestration_classifies_structural_script_results(
     tmp_path: Path,
     monkeypatch,
     patched_code: int,
     original_code: int,
     expected: str,
+    game_id: str,
 ) -> None:
-    faith = _game_module("faith")
+    game = _game_module(game_id)
     archive = tmp_path / "game.droid"
     archive.write_bytes(b"synthetic GameMaker fixture")
     monkeypatch.setattr(
@@ -116,7 +118,7 @@ def test_gamemaker_orchestration_classifies_structural_script_results(
 
     monkeypatch.setattr(gamemaker, "run_undertale_script", run)
 
-    assert faith.probe({faith.REQUIRED_ENTRIES[0]: archive})["state"] == expected
+    assert game.probe({game.REQUIRED_ENTRIES[0]: archive})["state"] == expected
 
 
 def test_dex_overlay_matcher_and_in_place_void_method_patch() -> None:

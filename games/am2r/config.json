@@ -1,0 +1,36 @@
+{
+  "id": "am2r",
+  "name": "AM2R",
+  "display_name": "AM2R",
+  "package": "com.lojical.AM2R",
+  "package_names": [
+    "com.lojical.AM2R"
+  ],
+  "engine": "GameMaker Studio YYC",
+  "status": "experimental",
+  "experimental": true,
+  "output_name": "AM2R-v1-5-2-4x3.apk",
+  "required_entries": [],
+  "preferred_entries": [
+    "lib/*/libyoyo.so"
+  ],
+  "entry_globs": [
+    "lib/*/libyoyo.so"
+  ],
+  "tested_versions": [
+    "1.5.2 (version code 1005012)"
+  ],
+  "features": [
+    "restore the native 320x240 4:3 output for intros, menus, and gameplay",
+    "disable the compiled 426x240 widescreen path without stretching",
+    "lock the display-menu widescreen option off across all bundled ABIs"
+  ],
+  "compatibility": {
+    "strategy": "package identity, a nonempty subset of audited libyoyo.so ABIs, exact per-library hashes, ELF architecture and load mapping, guarded native instructions, and patched postconditions",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "exact_native_build_required": true,
+    "structural_verification": "complete",
+    "visual_verification": "pending"
+  }
+}

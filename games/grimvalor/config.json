@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "grimvalor",
+  "name": "grimvalor",
+  "display_name": "Grimvalor",
+  "package": "com.direlight.grimvalor",
+  "package_names": [
+    "com.direlight.grimvalor"
+  ],
+  "engine": "Unity IL2CPP",
+  "status": "experimental",
+  "tested_versions": [
+    "1.2.13 (version code 76, arm64-v8a)"
+  ],
+  "module": "patch_impl.py",
+  "required_entries": [
+    "lib/arm64-v8a/libil2cpp.so"
+  ],
+  "preferred_entries": [],
+  "entry_globs": [],
+  "output_name": "Grimvalor-v1.2.13-4x3.apk",
+  "features": [
+    "built-in 4:3 UI, intro, and menu selection",
+    "native Camera.aspect gameplay and cinematic behavior retained",
+    "interstitial ad request/display paths disabled",
+    "game analytics initialization, queueing, sending, and update paths disabled"
+  ],
+  "known_limitations": [
+    "The 4:3 result is structurally verified but has not yet been visually verified on the target device.",
+    "A real 4:3 Android framebuffer is required; the UI selector does not create a 4:3 viewport inside a widescreen framebuffer."
+  ],
+  "compatibility": {
+    "strategy": "exact tested arm64 library plus ELF mapping, complete unique method signatures, canonical SHA-256, and final patched hash",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "notes": [
+      "A partially completed audited library is safe to finish because patched instructions are canonicalized back to the exact source hash.",
+      "The shared optional branding cleanup remains responsible for recognized APKVision runtime wrappers.",
+      "Billing, purchases, cloud saves, authentication, achievements, and Play Games are preserved."
+    ]
+  }
+}

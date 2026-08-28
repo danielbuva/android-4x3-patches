@@ -54,6 +54,49 @@ STANDALONE_LIBRARY_NAMES = {
     "libapkvisionorg.so",
 }
 
+# Standalone APKVision-named libraries are not interchangeable. Some builds
+# nativeize or register launch-critical Java methods from JNI_OnLoad, so a
+# basename and exported symbol can never authorize a rewrite. Add a digest here
+# only after the complete binary has been audited as overlay-only. Keeping the
+# allowlist empty is intentional until such a payload is independently proven.
+KNOWN_SAFE_STANDALONE_NATIVE_SHA256: dict[str, frozenset[str]] = {}
+
+# Dusklight v1.4.1 uses both APKVision-named libraries for launch-critical JNI.
+# The lowercase library registers nativeized launcher methods; the uppercase
+# library supplies Main.CheckOverlayPermission. Preserve both only when the
+# exact classes2/runtime fingerprints identify this audited build.
+DUSKLIGHT_V141_CLASSES2_SHA256 = (
+    "dd345f43820aee0084d67b7f496ab86da8776004015c76b69e2a75d601137089"
+)
+DUSKLIGHT_V141_LAUNCH_RUNTIME_SHA256 = (
+    "3f89da72825933bd783e34b96d29fc5c6ad918ba6cb66beb10b1c02b36b4651f"
+)
+DUSKLIGHT_V141_OVERLAY_RUNTIME_SHA256 = (
+    "e88ac07b305fd3546c61e431b379f28187a065cb1f393b078c72d63690572ed9"
+)
+
+# Streets of Rage 4 v1.4.5 folds APKVision startup hooks, Dex2C dispatch, and
+# Pairip/signature behavior into one libstub. Replacing the overlay functions
+# themselves leaves an injected wrapper active and makes re-signed builds kill
+# their own process. The audited safe cleanup instead skips four calls in the
+# nativeized MainActivity.onCreate, then continues to the genuine Xamarin
+# n_onCreate(Bundle) callback. Exact full-image canonicalization prevents this
+# source-specific recipe from authorizing a related or partially unknown ELF.
+SOR4_V145_LIBSTUB_ORIGINAL_SHA256 = (
+    "b43b4781d24f9a839a1f7e5d53bc912a14b3c190073aaadef6fea2d9ffa9d5c6"
+)
+SOR4_V145_LIBSTUB_PATCHED_SHA256 = (
+    "8d80b7ab0349f52b2fb4a559ba68843016d1bd72baf7a90d560633c32e0eb37c"
+)
+SOR4_V145_STARTUP_CALLS = (
+    (0x81F6C, "skip injected source/signature wrapper"),
+    (0x81FDC, "skip APKVision Activity overlay"),
+    (0x8204C, "skip APKVision Context overlay"),
+    (0x820BC, "skip injected service wrapper"),
+)
+_AARCH64_BLR_X8 = bytes.fromhex("00 01 3f d6")
+_AARCH64_NOP = bytes.fromhex("1f 20 03 d5")
+
 STUB_MARKERS = (
     b"apkvision/",
     b"https://apkvision.org/",
@@ -704,11 +747,54 @@ def _patch_elf_function(
     return True, offset
 
 
+def _patch_sor4_protected_libstub(
+    entry_name: str, data: bytes
+) -> tuple[bytes, list[Change], int, int] | None:
+    """Apply the audited SOR4 startup-call recipe, including mixed states."""
+
+    canonical = bytearray(data)
+    for offset, _detail in SOR4_V145_STARTUP_CALLS:
+        actual = bytes(canonical[offset : offset + len(_AARCH64_BLR_X8)])
+        if actual not in (_AARCH64_BLR_X8, _AARCH64_NOP):
+            return None
+        canonical[offset : offset + len(_AARCH64_BLR_X8)] = _AARCH64_BLR_X8
+    if hashlib.sha256(canonical).hexdigest() != SOR4_V145_LIBSTUB_ORIGINAL_SHA256:
+        return None
+
+    mutable = bytearray(data)
+    changes: list[Change] = []
+    patches = 0
+    for offset, detail in SOR4_V145_STARTUP_CALLS:
+        actual = bytes(mutable[offset : offset + len(_AARCH64_BLR_X8)])
+        if actual == _AARCH64_BLR_X8:
+            mutable[offset : offset + len(_AARCH64_BLR_X8)] = _AARCH64_NOP
+            patches += 1
+            changes.append(Change("native-startup-call", entry_name, detail, offset))
+        else:
+            changes.append(
+                Change("already-neutralized", entry_name, detail + " already skipped", offset)
+            )
+    result = bytes(mutable)
+    if hashlib.sha256(result).hexdigest() != SOR4_V145_LIBSTUB_PATCHED_SHA256:
+        raise PatchError(f"{entry_name}: SOR4 protected-runtime fingerprint mismatch")
+    return result, changes, len(SOR4_V145_STARTUP_CALLS), patches
+
+
 def patch_native_entry(entry_name: str, data: bytes, strong_apk_marker: bool) -> tuple[bytes, list[Change], int, int]:
     """Patch a known native payload and return data, changes, targets, patches."""
     basename = Path(entry_name).name.lower()
     if basename not in STANDALONE_LIBRARY_NAMES and basename != "libstub.so":
         return data, [], 0, 0
+    if basename == "libstub.so":
+        protected = _patch_sor4_protected_libstub(entry_name, data)
+        if protected is not None:
+            return protected
+    if basename in STANDALONE_LIBRARY_NAMES:
+        allowed = KNOWN_SAFE_STANDALONE_NATIVE_SHA256.get(basename, frozenset())
+        if hashlib.sha256(data).hexdigest() not in allowed:
+            # Unknown JNI runtimes are optional branding candidates, not safe
+            # patch targets. Leave them byte-for-byte unchanged without noise.
+            return data, [], 0, 0
     try:
         mutable = bytearray(data)
         elf = ElfImage(mutable)
@@ -944,11 +1030,38 @@ def _structural_markers(infos: Sequence[zipfile.ZipInfo]) -> list[str]:
     for asset in sorted(BRANDING_ASSET_NAMES):
         if asset in lower_names:
             reasons.append(f"branding asset {asset}")
-    for info in infos:
-        basename = Path(info.filename).name.lower()
-        if basename in STANDALONE_LIBRARY_NAMES:
-            reasons.append(f"injected library {info.filename}")
     return reasons
+
+
+def _is_known_safe_standalone_runtime(entry_name: str, data: bytes) -> bool:
+    """Require an exact audited digest before treating a standalone JNI library as branding."""
+
+    basename = Path(entry_name).name.lower()
+    allowed = KNOWN_SAFE_STANDALONE_NATIVE_SHA256.get(basename, frozenset())
+    return hashlib.sha256(data).hexdigest() in allowed
+
+
+def _is_dusklight_launch_runtime(
+    entry_name: str,
+    data: bytes,
+    candidate_data: dict[str, bytes],
+) -> bool:
+    """Recognize either exact APKVision-named runtime required for launch."""
+
+    basename = Path(entry_name).name
+    wanted = {
+        "libapkvisionorg.so": DUSKLIGHT_V141_LAUNCH_RUNTIME_SHA256,
+        "libAPKVISION.so": DUSKLIGHT_V141_OVERLAY_RUNTIME_SHA256,
+    }.get(basename)
+    if wanted is None:
+        return False
+    classes2 = candidate_data.get("classes2.dex")
+    if classes2 is None:
+        return False
+    return (
+        hashlib.sha256(classes2).hexdigest() == DUSKLIGHT_V141_CLASSES2_SHA256
+        and hashlib.sha256(data).hexdigest() == wanted
+    )
 
 
 def analyze_apk(
@@ -1029,13 +1142,44 @@ def analyze_apk(
                 plan.detection_reasons.append(f"APKVision marker in {name}")
             if _is_dex_name(name) and any(marker in data for marker in DEX_MARKERS):
                 plan.detection_reasons.append(f"APKVision classes in {name}")
+            if _is_known_safe_standalone_runtime(name, data):
+                plan.detection_reasons.append(
+                    f"allowlisted APKVision overlay runtime in {name}"
+                )
+            if _is_dusklight_launch_runtime(name, data, candidate_data):
+                plan.detection_reasons.append(
+                    "exact Dusklight v1.4.1 launch-critical runtime set"
+                )
         plan.detection_reasons = list(dict.fromkeys(plan.detection_reasons))
         plan.detected = bool(plan.detection_reasons)
         if not plan.detected and not plan.replacement_files:
-            plan.warnings.append("no recognized APKVision runtime or branding markers were found")
             return plan
 
+        classes2 = candidate_data.get("classes2.dex")
+        if (
+            classes2 is not None
+            and hashlib.sha256(classes2).hexdigest()
+            == DUSKLIGHT_V141_CLASSES2_SHA256
+        ):
+            required_runtimes = {
+                "libapkvisionorg.so": DUSKLIGHT_V141_LAUNCH_RUNTIME_SHA256,
+                "libAPKVISION.so": DUSKLIGHT_V141_OVERLAY_RUNTIME_SHA256,
+            }
+            by_basename = {Path(name).name: data for name, data in candidate_data.items()}
+            changed = [
+                name
+                for name, digest in required_runtimes.items()
+                if name not in by_basename
+                or hashlib.sha256(by_basename[name]).hexdigest() != digest
+            ]
+            if changed:
+                raise PatchError(
+                    "Dusklight v1.4.1 launch-critical runtime set changed: "
+                    + ", ".join(changed)
+                )
+
         strong_marker = plan.detected
+        preserved_launch_runtime = False
         for info in infos:
             name = info.filename
             lower = name.lower()
@@ -1049,6 +1193,21 @@ def analyze_apk(
                 continue
             if basename == "libstub.so" or basename in STANDALONE_LIBRARY_NAMES:
                 original = candidate_data[name]
+                if _is_dusklight_launch_runtime(name, original, candidate_data):
+                    preserved_launch_runtime = True
+                    plan.changes.append(
+                        Change(
+                            "preserve-launch-runtime",
+                            name,
+                            "keep exact Dusklight v1.4.1 launch-critical JNI runtime byte-for-byte",
+                        )
+                    )
+                    continue
+                if (
+                    basename in STANDALONE_LIBRARY_NAMES
+                    and not _is_known_safe_standalone_runtime(name, original)
+                ):
+                    continue
                 try:
                     modified, changes, targets, patches = patch_native_entry(name, original, strong_marker)
                 except PatchError as exc:
@@ -1072,7 +1231,12 @@ def analyze_apk(
                 if modified != original:
                     plan.modified_entries[name] = modified
 
-        runtime_safe = not plan.detected or plan.runtime_targets > 0 or allow_no_runtime_patch
+        runtime_safe = (
+            not plan.detected
+            or plan.runtime_targets > 0
+            or preserved_launch_runtime
+            or allow_no_runtime_patch
+        )
         if not runtime_safe:
             plan.warnings.append(
                 "recognized branding was found, but no supported runtime entry point was found; "
@@ -1270,7 +1434,15 @@ def neutralize_apk(
     )
     if dry_run or (not plan.detected and not plan.replacement_files):
         return plan
-    if plan.detected and plan.runtime_targets == 0 and not allow_no_runtime_patch:
+    preserved_runtime = any(
+        change.kind == "preserve-launch-runtime" for change in plan.changes
+    )
+    if (
+        plan.detected
+        and plan.runtime_targets == 0
+        and not preserved_runtime
+        and not allow_no_runtime_patch
+    ):
         raise PatchError(plan.warnings[-1])
     _write_apk(plan, force=force, full_verify=full_verify)
     return plan

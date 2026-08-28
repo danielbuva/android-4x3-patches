@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "children-of-morta",
+  "name": "children-of-morta",
+  "display_name": "Children of Morta",
+  "package": "com.playdigious.childrenofmorta",
+  "package_names": [
+    "com.playdigious.childrenofmorta"
+  ],
+  "engine": "Unity IL2CPP",
+  "status": "experimental",
+  "tested_versions": [
+    "1.1.4 (version code 41, arm64-v8a)"
+  ],
+  "module": "patch_impl.py",
+  "required_entries": [
+    "lib/arm64-v8a/libil2cpp.so",
+    "res/drawable/unity_static_splash.png",
+    "assets/AssetBundles/core",
+    "assets/AssetBundles/home",
+    "assets/AssetBundles/run_shared_base",
+    "assets/bin/Data/datapack.unity3d"
+  ],
+  "preferred_entries": [],
+  "entry_globs": [],
+  "output_name": "Children-of-Morta-4x3.apk",
+  "features": [
+    "4:3 gameplay camera aspect",
+    "4:3 menu, HUD, loading, and splash-screen CanvasScaler references",
+    "4:3 center-cropped Android static splash without stretching",
+    "isolated Firebase Analytics event cleanup while preserving FirebaseApp initialization",
+    "hidden More Games cross-promotion while preserving purchases and online services"
+  ],
+  "compatibility": {
+    "strategy": "semantic-unity-plus-exact-native",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "notes": [
+      "Unity objects are selected by CanvasScaler script identity, structure, object cohort, and original-or-patched resolution.",
+      "The AArch64 library is constrained by ELF mapping, canonical SHA-256, and exact original-or-patched bytes at every target.",
+      "FirebaseInitProvider remains untouched so Remote Config and other Firebase-backed game services can initialize.",
+      "Billing, Play Pass, cloud features, Play Games, EOS, and Firebase Remote Config are retained.",
+      "Source-specific branding cleanup remains optional and framework-owned."
+    ]
+  }
+}

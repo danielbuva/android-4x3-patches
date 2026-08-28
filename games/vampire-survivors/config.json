@@ -9,6 +9,10 @@
     "1.15.115 (version code 64958511)"
   ],
   "output_name": "Vampire-Survivors-4x3.apk",
+  "required_entries": [
+    "assets/bin/Data/datapack.unity3d",
+    "lib/arm64-v8a/libil2cpp.so"
+  ],
   "entry_globs": [
     "assets/bin/Data/datapack.unity3d",
     "lib/arm64-v8a/libil2cpp.so"

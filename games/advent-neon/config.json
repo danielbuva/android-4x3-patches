@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "advent-neon",
+  "name": "advent-neon",
+  "display_name": "Advent Neon",
+  "package": "com.CryoGX.adventneonunofficialandroidportbyplayer1444",
+  "package_names": [
+    "com.CryoGX.adventneonunofficialandroidportbyplayer1444"
+  ],
+  "engine": "GameMaker Studio 2 VM (Undertale bytecode 17)",
+  "status": "experimental",
+  "experimental": true,
+  "tested_versions": [
+    "1.0.0 (version code 1000000)"
+  ],
+  "module": "patch_impl.py",
+  "required_entries": [
+    "assets/game.droid"
+  ],
+  "preferred_entries": [],
+  "entry_globs": [],
+  "output_name": "Advent-Neon-4x3.apk",
+  "features": [
+    "centered 1280x960 views and ports with 120 extra world pixels above and below",
+    "4:3 camera, GUI, pause capture, shader compositor, and video reset paths",
+    "expanded splash, cutscene, dialogue, objective, boss-intro, transition, training, stage-stat, and stage-clear UI",
+    "shared optional APKVision branding cleanup"
+  ],
+  "known_limitations": [
+    "The result is structurally verified but has not yet been visually verified on a device.",
+    "Previously unauthored vertical world/background space, particles, cinematics, or encounter framing may need follow-up adjustments.",
+    "Saved mobile-control positions may retain coordinates chosen for the old 1280x720 GUI until reset by the player."
+  ],
+  "compatibility": {
+    "strategy": "named GameMaker project/resource checks plus guarded semantic source fragments and patched postconditions",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "branding_cleanup_required": false,
+    "structural_verification": "complete",
+    "visual_verification": "pending",
+    "notes": [
+      "The tested source was verified with UndertaleModCli 0.9.2.0.",
+      "APKVision cleanup remains optional and is handled by the shared framework."
+    ]
+  }
+}

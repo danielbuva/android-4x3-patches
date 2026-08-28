@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "rogue-legacy",
+  "name": "rogue-legacy",
+  "display_name": "Rogue Legacy",
+  "package": "com.roguelegacy.port",
+  "package_names": [
+    "com.roguelegacy.port"
+  ],
+  "engine": ".NET 8 Android / MonoGame",
+  "status": "experimental",
+  "tested_versions": [
+    "1.4.1-r2 (version code 1, arm64-v8a and armeabi-v7a)"
+  ],
+  "module": "patch_impl.py",
+  "required_entries": [
+    "assemblies/assemblies.blob",
+    "assemblies/assemblies.manifest"
+  ],
+  "preferred_entries": [],
+  "entry_globs": [],
+  "output_name": "Rogue-Legacy-4x3.apk",
+  "features": [
+    "expanded-vertical 1320x990 gameplay and touch space",
+    "4:3 splash, title, options, and pause layouts",
+    "proportional fixed 16:9 title artwork",
+    "recognized porter Telegram credit and developer-promo neutralization when present"
+  ],
+  "compatibility": {
+    "strategy": "named-XABA-assembly-and-guarded-4:3-IL-regions; porter cleanup is optional",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "notes": [
+      "RogueLegacy.Android is resolved by name from assemblies.manifest instead of assuming one descriptor index.",
+      "Every required 4:3 IL and user-string target accepts only its audited original or patched value and is safe to finish from a mixed state.",
+      "Porter, Telegram, and promotional targets are source-specific: recognized copies are neutralized, while absent or unfamiliar copies are preserved silently.",
+      "The shared optional branding cleanup remains responsible for recognized APKVision runtime wrappers."
+    ]
+  }
+}

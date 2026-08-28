@@ -1,0 +1,30 @@
+{
+  "id": "dusklight",
+  "display_name": "Dusklight",
+  "package_names": [
+    "dev.twilitrealm.dusk"
+  ],
+  "engine": "native SDL/Aurora",
+  "status": "experimental",
+  "output_name": "Dusklight-v1.4.1-4x3.apk",
+  "tested_versions": [
+    "1.4.1 (10401000)"
+  ],
+  "required_entries": [
+    "assets/data1"
+  ],
+  "preferred_entries": [
+    "AndroidManifest.xml",
+    "assets/data1",
+    "classes2.dex",
+    "lib/arm64-v8a/libAPKVISION.so",
+    "lib/arm64-v8a/libapkvisionorg.so"
+  ],
+  "entry_globs": [],
+  "compatibility": {
+    "strategy": "semantic matching of the three required 4:3 config values inside assets/data1; unrelated config values, archive members, runtime, manifest, and overlay bytes are advisory and preserved",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "visual_verification": "pending"
+  }
+}

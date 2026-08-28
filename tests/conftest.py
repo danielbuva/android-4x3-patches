@@ -179,6 +179,7 @@ def _make_synthetic_game(
         "engine": "Synthetic",
         "status": status,
         "output_name": f"{game_id}-4x3.apk",
+        "required_entries": ["assets/patch state.bin"],
         "tested_versions": ["test-only"],
         "entry_globs": [],
     }

@@ -161,6 +161,7 @@ def test_missing_preferred_entry_falls_back_to_semantic_glob_scan(
                 "display_name": "Fallback Game",
                 "package_names": ["org.example.fallback"],
                 "status": "verified",
+                "required_entries": ["assets/core.bin"],
                 "preferred_entries": ["assets/bundles/tested-name.bin"],
                 "entry_globs": ["assets/bundles/*.bin"],
             }

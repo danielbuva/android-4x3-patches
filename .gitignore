@@ -1,6 +1,7 @@
 # Game/application packages and generated signatures
 *.apk
 *.apks
+*.apkm
 *.xapk
 *.aab
 *.idsig
@@ -12,6 +13,9 @@
 *.dylib
 *.unity3d
 *.bundle
+*.blob
+*.iso
+*.mp4
 *.zip
 
 # Signing material and certificates
@@ -49,6 +53,11 @@ temp/
 .tmp/
 .temp/
 android-4x3-work-*/
+apktool-out/
+decompiled/
+extracted/
+work/
+.work/
 *.log
 *.tmp
 *.orig
@@ -60,4 +69,5 @@ android-4x3-work-*/
 Thumbs.db
 .idea/
 .vscode/
+local.properties
 *~

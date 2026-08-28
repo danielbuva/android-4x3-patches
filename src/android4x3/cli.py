@@ -172,7 +172,8 @@ def run(argv: list[str] | None = None) -> int:
             )
     if config.experimental and not args.allow_experimental:
         raise PatchError(
-            f"{config.display_name} support is experimental and has known rendering defects; "
+            f"{config.display_name} support is experimental because visual verification is "
+            "incomplete or a documented limitation remains; "
             "rerun with --allow-experimental to continue"
         )
 
