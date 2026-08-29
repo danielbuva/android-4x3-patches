@@ -26,7 +26,8 @@ assumptions:
 - title rendering, post-processing, fades, camera, selections, menus,
   copyright text, loading text, and touch-button anchors
 - options-menu background centering with its relative slide distances preserved
-- proportional map and teleporter rendering centered in the taller display
+- a 1220×890 map/teleporter render surface, with its camera, room labels, title
+  normalization, and bottom legend moved onto the 990-line coordinate system
 - pause-menu icon layout
 - touch-coordinate conversion through the taller virtual screen
 - an initial virtual-screen metrics refresh, so the 1320x990 dimensions reach
@@ -114,6 +115,6 @@ silent handling of absent or unfamiliar optional branding.
 
 The audited `1.4.1-r2` structures are the basis for the production targets.
 Full device-side visual verification across gameplay, title, options, pause,
-transitions, and touch controls remains pending, so the module stays
-experimental. Fixed 16:9 artwork is kept proportional and may not fill the
-newly exposed vertical area with unique artwork.
+map, teleporter, transitions, and touch controls remains pending, so the
+module stays experimental. Fixed 16:9 artwork is kept proportional and may not
+fill the newly exposed vertical area with unique artwork.

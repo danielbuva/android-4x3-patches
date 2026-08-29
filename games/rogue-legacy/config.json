@@ -24,7 +24,7 @@
     "expanded-vertical 1320x990 gameplay and touch space",
     "initial 4:3 metrics refresh before the first playable room",
     "4:3 splash, title, centered options, and pause layouts",
-    "proportional map and teleporter surface centered without stretching",
+    "expanded 1220x890 map and teleporter surface with 990-line labels and legend",
     "proportional fixed 16:9 title artwork",
     "recognized porter Telegram credit and developer-promo neutralization when present"
   ],

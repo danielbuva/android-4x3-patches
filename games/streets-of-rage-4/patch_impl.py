@@ -80,6 +80,8 @@ class _BigfilePatch:
     original: bytes
     replacement: bytes
     root_transform: bool = False
+    match_count: int = 1
+    overlap_count: int = 0
 
 
 def _change(name: str, offset: int, original: str, replacement: str) -> _BinaryPatch:
@@ -175,12 +177,17 @@ def _bigfile_change(
     replacement: str,
     *,
     root_transform: bool = False,
+    match_count: int = 1,
 ) -> _BigfilePatch:
     before = bytes.fromhex(original)
     after = bytes.fromhex(replacement)
     if len(before) != len(after):  # pragma: no cover - module authoring invariant
         raise ValueError(f"{name}: in-place bigfile patch length changed")
-    return _BigfilePatch(name, asset_path, before, after, root_transform)
+    if match_count < 1:  # pragma: no cover - module authoring invariant
+        raise ValueError(f"{name}: match count must be positive")
+    return _BigfilePatch(
+        name, asset_path, before, after, root_transform, match_count, 0
+    )
 
 
 def _bigfile_root_height(name: str, asset_path: str) -> _BigfilePatch:
@@ -191,6 +198,49 @@ def _bigfile_root_height(name: str, asset_path: str) -> _BigfilePatch:
         "0a 0a 0d 00 00 f0 44 15 00 00 b4 44",
         root_transform=True,
     )
+
+
+def _bigfile_repeat_change(
+    name: str,
+    asset_path: str,
+    original: bytes,
+    replacement: bytes,
+    match_count: int,
+    overlap_count: int = 0,
+) -> _BigfilePatch:
+    if len(original) != len(replacement):  # pragma: no cover - authoring invariant
+        raise ValueError(f"{name}: repeated patch length changed")
+    return _BigfilePatch(
+        name,
+        asset_path,
+        original,
+        replacement,
+        False,
+        match_count,
+        overlap_count,
+    )
+
+
+def _bigfile_repeat_float(
+    name: str,
+    asset_path: str,
+    field_number: int,
+    original: float,
+    replacement: float,
+    match_count: int,
+) -> _BigfilePatch:
+    tag = bytes(((field_number << 3) | 5,))
+    return _bigfile_repeat_change(
+        name,
+        asset_path,
+        tag + struct.pack("<f", original),
+        tag + struct.pack("<f", replacement),
+        match_count,
+    )
+
+
+_SIZE_1920X1080 = bytes.fromhex("0a 0a 0d 00 00 f0 44 15 00 00 87 44")
+_SIZE_1920X1440 = bytes.fromhex("0a 0a 0d 00 00 f0 44 15 00 00 b4 44")
 
 
 # The mobile title and main-menu screens are composed from protobuf-net GUI
@@ -335,6 +385,232 @@ _BIGFILE_PATCHES = (
     _bigfile_root_height("cutscene-skip-root-height", "gui/gui_cutscene_skip"),
     _bigfile_root_height("loading-screen-root-height", "gui/gui_loading_screen"),
     _bigfile_root_height("loading-overlay-root-height", "gui/gui_loading_overlay"),
+    # The outer 1440-line roots above do not resize nested full-screen
+    # containers. Expand the exact inner 1920x1080 canvases used by the story,
+    # character/player-selection, and mobile-control paths.
+    _bigfile_repeat_change(
+        "story-inner-canvas-heights",
+        "gui/menus/gui_story",
+        _SIZE_1920X1080,
+        _SIZE_1920X1440,
+        3,
+        overlap_count=1,
+    ),
+    _bigfile_repeat_change(
+        "mobile-story-inner-canvas-heights",
+        "gui/menus/mobile/gui_story",
+        _SIZE_1920X1080,
+        _SIZE_1920X1440,
+        4,
+        overlap_count=1,
+    ),
+    _bigfile_repeat_change(
+        "character-select-inner-canvas-heights",
+        "gui/menus/gui_menu_character_select",
+        _SIZE_1920X1080,
+        _SIZE_1920X1440,
+        6,
+        overlap_count=1,
+    ),
+    _bigfile_repeat_change(
+        "mobile-character-select-inner-canvas-heights",
+        "gui/menus/mobile/gui_menu_character_select",
+        _SIZE_1920X1080,
+        _SIZE_1920X1440,
+        11,
+        overlap_count=1,
+    ),
+    _bigfile_repeat_change(
+        "player-select-inner-canvas-heights",
+        "gui/gui_player_select_screen",
+        _SIZE_1920X1080,
+        _SIZE_1920X1440,
+        4,
+        overlap_count=1,
+    ),
+    # Keep the controller legends at the real bottom rather than the bottom of
+    # the former 1080-line safe area. The complete node context prevents these
+    # values from matching unrelated 540-line centers in the same record.
+    _bigfile_change(
+        "story-controls-bottom",
+        "gui/menus/gui_story",
+        """
+        0a 0a 0d 00 00 70 44 15 00 00 07 44
+        12 08 63 6f 6e 74 72 6f 6c 73
+        1d 00 00 80 3f
+        """,
+        """
+        0a 0a 0d 00 00 70 44 15 00 00 61 44
+        12 08 63 6f 6e 74 72 6f 6c 73
+        1d 00 00 80 3f
+        """,
+    ),
+    _bigfile_change(
+        "mobile-story-controls-bottom",
+        "gui/menus/mobile/gui_story",
+        """
+        0a 0a 0d 00 00 70 44 15 00 00 07 44
+        12 08 63 6f 6e 74 72 6f 6c 73
+        1d 00 00 80 3f
+        """,
+        """
+        0a 0a 0d 00 00 70 44 15 00 00 61 44
+        12 08 63 6f 6e 74 72 6f 6c 73
+        1d 00 00 80 3f
+        """,
+    ),
+    _bigfile_repeat_float(
+        "story-clip-height",
+        "gui/menus/gui_story",
+        4,
+        1080.0,
+        1440.0,
+        1,
+    ),
+    _bigfile_repeat_float(
+        "mobile-story-clip-height",
+        "gui/menus/mobile/gui_story",
+        4,
+        1080.0,
+        1440.0,
+        1,
+    ),
+    # Recenter the character grids within the taller screen. Mobile layouts
+    # retain their extra lower control area while moving by the same 180-line
+    # change in vertical center.
+    _bigfile_repeat_float(
+        "character-select-lower-group-center",
+        "gui/menus/gui_menu_character_select",
+        2,
+        875.0,
+        1055.0,
+        8,
+    ),
+    _bigfile_repeat_float(
+        "character-select-fractional-group-center",
+        "gui/menus/gui_menu_character_select",
+        2,
+        875.0001220703125,
+        1055.0001220703125,
+        1,
+    ),
+    _bigfile_repeat_float(
+        "mobile-character-select-center",
+        "gui/menus/mobile/gui_menu_character_select",
+        2,
+        540.0,
+        720.0,
+        3,
+    ),
+    _bigfile_repeat_float(
+        "mobile-character-select-upper-group-center",
+        "gui/menus/mobile/gui_menu_character_select",
+        2,
+        575.0,
+        755.0,
+        5,
+    ),
+    _bigfile_repeat_float(
+        "mobile-character-select-lower-group-center",
+        "gui/menus/mobile/gui_menu_character_select",
+        2,
+        875.0,
+        1055.0,
+        5,
+    ),
+    _bigfile_repeat_float(
+        "mobile-character-select-clip-heights",
+        "gui/menus/mobile/gui_menu_character_select",
+        4,
+        1080.0,
+        1440.0,
+        3,
+    ),
+    # Player-select button hints were absolute old-safe-area coordinates.
+    _bigfile_repeat_float(
+        "player-select-a-button-bottom",
+        "gui/gui_player_select_screen",
+        2,
+        680.0,
+        1040.0,
+        1,
+    ),
+    _bigfile_repeat_float(
+        "player-select-a-label-bottom",
+        "gui/gui_player_select_screen",
+        2,
+        686.0,
+        1046.0,
+        1,
+    ),
+    _bigfile_repeat_float(
+        "player-select-b-button-bottom",
+        "gui/gui_player_select_screen",
+        2,
+        756.0,
+        1116.0,
+        1,
+    ),
+    _bigfile_repeat_float(
+        "player-select-b-label-bottom",
+        "gui/gui_player_select_screen",
+        2,
+        755.0,
+        1115.0,
+        1,
+    ),
+    # Bottom prompts and loading indicators use the full new bottom edge.
+    _bigfile_repeat_float(
+        "cutscene-skip-bottom",
+        "gui/gui_cutscene_skip",
+        2,
+        945.7144,
+        1305.7144,
+        3,
+    ),
+    _bigfile_repeat_float(
+        "loading-indicator-bottom",
+        "gui/gui_loading_overlay",
+        2,
+        1002.0,
+        1362.0,
+        1,
+    ),
+    _bigfile_repeat_float(
+        "loading-waiting-text-bottom",
+        "gui/gui_loading_overlay",
+        2,
+        945.7144,
+        1305.7144,
+        1,
+    ),
+    _bigfile_change(
+        "loading-screen-clear-height",
+        "gui/gui_loading_screen",
+        "12 0a 0d 00 00 f0 44 15 00 00 87 44",
+        "12 0a 0d 00 00 f0 44 15 00 00 b4 44",
+    ),
+    # The stage-map artwork has no additional vertical source area. Uniformly
+    # scale the complete root by 4/3 and center-crop its sides, preserving map
+    # marker alignment while eliminating the blank lower quarter.
+    _bigfile_change(
+        "stage-map-root-center-crop",
+        "gui/gui_stage_map",
+        """
+        0a 0a 0d 00 00 70 44 15 00 00 07 44
+        1d 00 00 80 3f
+        2a 0c 08 ff 01 10 ff 01 18 ff 01 20 ff 01
+        52 0a 0d 00 00 00 3f 15 00 00 00 3f
+        58 00
+        """,
+        """
+        0a 0a 0d 00 00 70 44 15 00 00 34 44
+        1d ab aa aa 3f
+        2a 0c 08 ff 01 10 ff 01 18 ff 01 20 ff 01
+        52 0a 0d 00 00 00 3f 15 00 00 00 3f
+        58 00
+        """,
+    ),
 )
 
 _BIGFILE_MAX_RAW_SIZE = 256 * 1024 * 1024
@@ -621,19 +897,35 @@ def _bigfile_patch_locations(
                 state = "patched"
             else:
                 return "unsupported", ()
+            local_offsets = (local_offset,)
         else:
             original_count = payload.count(patch.original)
             patched_count = payload.count(patch.replacement)
-            if (original_count, patched_count) == (1, 0):
+            original_states = {
+                (patch.match_count + patch.overlap_count, 0),
+                (patch.match_count, patch.overlap_count),
+            }
+            if (original_count, patched_count) in original_states:
                 state = "original"
-                local_offset = payload.find(patch.original)
-            elif (original_count, patched_count) == (0, 1):
+                target = patch.original
+            elif (original_count, patched_count) == (
+                0,
+                patch.match_count + patch.overlap_count,
+            ):
                 state = "patched"
-                local_offset = payload.find(patch.replacement)
+                target = patch.replacement
             else:
                 return "unsupported", ()
+            local_offsets = tuple(
+                offset
+                for offset in range(len(payload))
+                if payload.startswith(target, offset)
+            )
         states.append(state)
-        locations.append((patch, state, entry.payload_offset + local_offset))
+        locations.extend(
+            (patch, state, entry.payload_offset + offset)
+            for offset in local_offsets
+        )
     if len(set(states)) == 1:
         return states[0], tuple(locations)
     return "mixed", tuple(locations)

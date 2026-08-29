@@ -265,8 +265,18 @@ def test_rogue_legacy_production_targets_are_guarded_and_length_preserving() -> 
         for region in rogue._REGIONS
         for change in region.changes
     }
-    assert changes["map and teleporter surface center"].original == rogue._r4(360)
-    assert changes["map and teleporter surface center"].patched == rogue._r4(495)
+    assert changes["map and teleporter surface height"].original == rogue._i4(620)
+    assert changes["map and teleporter surface height"].patched == rogue._i4(890)
+    assert changes["reinitialized map surface height"].original == rogue._i4(620)
+    assert changes["reinitialized map surface height"].patched == rogue._i4(890)
+    assert changes["map and teleporter camera center"].original == rogue._r4(360)
+    assert changes["map and teleporter camera center"].patched == rogue._r4(495)
+    assert changes["map unknown-room label center"].original == rogue._r4(360)
+    assert changes["map unknown-room label center"].patched == rogue._r4(495)
+    assert changes["map title vertical normalization"].original == rogue._r4(720)
+    assert changes["map title vertical normalization"].patched == rogue._r4(990)
+    assert changes["map legend bottom edge"].original == rogue._i4(720)
+    assert changes["map legend bottom edge"].patched == rogue._i4(990)
     assert changes["options list slide distance"].original == rogue._r4(495)
     assert changes["options list slide distance"].patched == rogue._r4(360)
     assert changes["options exit slide distance"].original == rogue._r4(-495)

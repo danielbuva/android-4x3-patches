@@ -103,7 +103,8 @@ def _synthetic_bigfile_raw(module, states: tuple[str, ...]) -> bytes:
             if patch.root_transform:
                 continue
             target = patch.original if state == "original" else patch.replacement
-            body += b"prefix" + target + b"suffix"
+            for _ in range(patch.match_count):
+                body += b"prefix" + target + b"suffix"
         if root is not None:
             payload = b"\x32" + _seven_bit_int(len(body)) + bytes(body)
         else:
@@ -262,6 +263,33 @@ def test_sor4_bigfile_center_crops_backgrounds_and_moves_button_legend() -> None
     for item in root_patches:
         assert struct.unpack("<f", item.original[8:12])[0] == 1080.0
         assert struct.unpack("<f", item.replacement[8:12])[0] == 1440.0
+
+    by_name = {item.name: item for item in module._BIGFILE_PATCHES}
+    assert by_name["story-inner-canvas-heights"].match_count == 3
+    assert by_name["mobile-story-inner-canvas-heights"].match_count == 4
+    assert by_name["character-select-inner-canvas-heights"].match_count == 6
+    assert by_name["mobile-character-select-inner-canvas-heights"].match_count == 11
+    assert by_name["player-select-inner-canvas-heights"].match_count == 4
+    for name in (
+        "story-inner-canvas-heights",
+        "mobile-story-inner-canvas-heights",
+        "character-select-inner-canvas-heights",
+        "mobile-character-select-inner-canvas-heights",
+        "player-select-inner-canvas-heights",
+    ):
+        assert by_name[name].overlap_count == 1
+
+    stage_map = by_name["stage-map-root-center-crop"]
+    assert stage_map.asset_path == "gui/gui_stage_map"
+    assert struct.unpack("<f", stage_map.original[8:12])[0] == 540.0
+    assert struct.unpack("<f", stage_map.replacement[8:12])[0] == 720.0
+    assert struct.unpack("<f", stage_map.original[13:17])[0] == 1.0
+    assert struct.unpack("<f", stage_map.replacement[13:17])[0] == pytest.approx(4 / 3)
+
+    for name in ("story-controls-bottom", "mobile-story-controls-bottom"):
+        controls = by_name[name]
+        assert struct.unpack("<f", controls.original[8:12])[0] == 540.0
+        assert struct.unpack("<f", controls.replacement[8:12])[0] == 900.0
 
 
 def test_sor4_bigfile_patch_round_trips_and_preserves_every_other_byte() -> None:

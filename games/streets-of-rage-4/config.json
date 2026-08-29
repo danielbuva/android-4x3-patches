@@ -43,8 +43,9 @@
     "1920x1440 default GUI canvas and expanded camera/culling height",
     "mobile top/bottom/side filler artwork suppressed at both presentation draw sites",
     "title artwork and main-menu background center-cropped to fill 4:3 while controls remain width-fit",
-    "Back and Select button legend aligned to the bottom of the 4:3 menu canvas",
-    "1920x1440 pre-game GUI roots from title through character select, story, skip prompt, and loading",
+    "bottom-aligned menu legend, story controls, player prompts, cutscene skip, and loading indicators",
+    "1920x1440 pre-game GUI roots and nested canvases from title through character select, story, skip prompt, and loading",
+    "uniformly scaled and centered 4:3 stage map",
     "proportional 4:3 center crop for all intro and stage videos",
     "isolated More Games analytics event suppressed while Firebase services remain initialized"
   ],

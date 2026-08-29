@@ -177,14 +177,41 @@ _REGIONS = (
         _hx("596ff81500060617580a06027b921300"),
         (_Change("options layout slide distance", 0, _r4(495), _r4(360)),),
     ),
-    # Map and teleporter modes share MapScreen. Keep their fixed map surface
-    # proportional and move only its center to the taller virtual screen.
+    # Map and teleporter modes share MapScreen. Expand their alpha-map surface
+    # from the old 1220x620 inset to the equivalent 1220x890 inset in the
+    # 1320x990 virtual screen. Keep camera, labels, and the legend on the same
+    # taller coordinate system so no intermediate target is stretched.
+    _Region(
+        "MapScreen..ctor",
+        _hx("027b81130004187d99180004027b81130004"),
+        0xA,
+        _hx("027b811300046ff11500066b"),
+        (_Change("map unknown-room label center", 0x5, _r4(360), _r4(495)),),
+    ),
+    _Region(
+        "MapScreen.FindRoomTitlePos",
+        _hx("057bc000000a"),
+        0x5,
+        _hx("5b22000000425a73ea00000a"),
+        (_Change("map title vertical normalization", 0, _r4(720), _r4(990)),),
+    ),
     _Region(
         "MapScreen.LoadContent",
-        _hx("027b781300042200002544"),
-        0x5,
-        _hx("73ea00000a7dc00e0004"),
-        (_Change("map and teleporter surface center", 0, _r4(360), _r4(495)),),
+        _hx("13300500bd09000021020011027b78130004"),
+        0x162,
+        _hx("6ffa15000672529d0070"),
+        (
+            _Change("map and teleporter surface height", 0x9, _i4(620), _i4(890)),
+            _Change("map and teleporter camera center", 0x29, _r4(360), _r4(495)),
+            _Change("map legend bottom edge", 0x148, _i4(720), _i4(990)),
+        ),
+    ),
+    _Region(
+        "MapScreen.ReinitializeRTs",
+        _hx("c6027b78130004"),
+        0x13,
+        _hx("0228fd1700066f2f040006"),
+        (_Change("reinitialized map surface height", 0x9, _i4(620), _i4(890)),),
     ),
     _Region(
         "PauseScreen.LayoutPauseIcons",
