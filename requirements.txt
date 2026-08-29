@@ -1,3 +1,5 @@
 UnityPy==1.25.3
 Pillow==12.3.0
 lz4==4.4.5
+dnfile==0.17.0
+dncil==1.0.2

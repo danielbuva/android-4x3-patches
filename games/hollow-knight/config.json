@@ -5,11 +5,12 @@
   "package_names": [
     "com.TeamCherry.HollowKnight"
   ],
-  "engine": "Unity IL2CPP",
+  "engine": "Unity IL2CPP / Mono",
   "status": "verified",
   "output_name": "Hollow-Knight-4x3.apk",
   "tested_versions": [
-    "1.5.78.11833"
+    "1.5.78.11833 (IL2CPP port)",
+    "1.3.0.0 (Mono port)"
   ],
   "features": [
     "expanded 4:3 world view",
@@ -20,15 +21,17 @@
     "assets/bin/Data/data.unity3d"
   ],
   "preferred_entries": [
+    "assets/bin/Data/Managed/Assembly-CSharp.dll",
     "lib/arm64-v8a/libil2cpp.so",
     "lib/armeabi-v7a/libil2cpp.so"
   ],
   "entry_globs": [
+    "assets/bin/Data/Managed/Assembly-CSharp.dll",
     "lib/arm64-v8a/libil2cpp.so",
     "lib/armeabi-v7a/libil2cpp.so"
   ],
   "compatibility": {
-    "strategy": "semantic Unity hierarchy and unique contextual native constants",
+    "strategy": "runtime-selected semantic Unity hierarchy plus managed methods or unique contextual native constants",
     "version_is_advisory": true,
     "whole_apk_hash_required": false
   }

@@ -119,6 +119,12 @@ patch.bat "C:\path\to\Your Game.apk"
 
 The patcher reports the output location when it finishes. By default it is placed in the repository's `output` folder and named like `Game-4x3.apk`.
 
+Hollow Knight APKs using the large Mono port can remain quiet for several
+minutes while the patcher rewrites their single Unity bundle. Keep the terminal
+open and allow several gigabytes of temporary free space. The patcher detects
+that port automatically; you use the same command as for the earlier IL2CPP
+port.
+
 For any game labeled **Experimental**, add the acknowledgement flag before the input path:
 
 ```sh

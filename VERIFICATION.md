@@ -34,6 +34,18 @@ authoritative status list. Experimental modules require
 `--allow-experimental`; that flag acknowledges the documented visual state and
 does not weaken structural compatibility checks.
 
+### Hollow Knight 1.3.0.0 Mono port
+
+The Mono implementation was reproduced from its unmodified source APK with the
+public patch command, rebuilt, aligned, signed, and recognized as patched by the
+post-build target probe. The signed APK was installed on adopted internal
+storage and cold-launched on the 1280×960 physical device. The disclaimer,
+language selection, startup logos, main menu, profile/overscan/brightness UI,
+opening sequence, and initial gameplay all rendered, and the process remained
+alive without a fatal exception. Final gameplay-wide visual acceptance remains
+the device owner's check; this record describes the completed structural and
+physical smoke verification.
+
 ## Native 4:3 and deferred titles
 
 Brotato, Dead Cells, DREDGE, and Thronefall already supported 4:3 in the tested

@@ -1,4 +1,4 @@
-"""Target-driven 4:3 patch for the verified Hollow Knight Android port."""
+"""Target-driven 4:3 patches for the IL2CPP and Mono Hollow Knight ports."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from typing import Any
 
 
 DATA_ENTRY = "assets/bin/Data/data.unity3d"
+MONO_ENTRY = "assets/bin/Data/Managed/Assembly-CSharp.dll"
 ARM64_ENTRY = "lib/arm64-v8a/libil2cpp.so"
 ARMV7_ENTRY = "lib/armeabi-v7a/libil2cpp.so"
 REQUIRED_ENTRIES = (DATA_ENTRY,)
@@ -24,6 +25,41 @@ HUD_CANVAS_TARGET_Y = HUD_CANVAS_SOURCE_Y + HUD_ORTHO_TARGET - HUD_ORTHO_SOURCE
 CAMERA_LIMIT_SOURCE = 8.300000190734863
 CAMERA_LIMIT_TARGET = CAMERA_LIMIT_SOURCE * SOURCE_ASPECT / TARGET_ASPECT
 REFERENCE_UI_HEIGHT = 1080.0
+REFERENCE_UI_HALF_HEIGHT = REFERENCE_UI_HEIGHT / 2.0
+
+DISCLAIMER_SCALE_SOURCE = 0.5492802262306213
+# The source text is wider than its nominal 1920-pixel canvas. Leave a small
+# 5% margin when Expand mode fits that canvas to the 4:3 display width.
+DISCLAIMER_SCALE_TARGET = (1920.0 * 0.95) / 3758.111083984375
+
+MONO_TOUCH_BUTTONS = frozenset(
+    {
+        "TouchChat",
+        "TouchMenu",
+        "TouchMod",
+        "TouchQuickMap",
+        "TouchSelect",
+        "TouchSuperDash",
+    }
+)
+
+MANAGED_ASPECT_METHODS = (
+    ("ForceCameraAspect", "Awake", 1, 1),
+    ("ForceCameraAspect", "AutoScaleViewport", 1, 2),
+    ("ForceCameraAspectLite", "AutoScaleViewport", 1, 1),
+)
+
+MANAGED_BOUND_METHODS = (
+    ("CameraController", "LateUpdate", 1, 2),
+    ("CameraController", "LockToArea", 1, 1),
+    ("CameraController", "KeepWithinSceneBounds", 2, 4),
+    ("CameraController", "IsAtSceneBounds", 1, 1),
+    ("CameraController", "GetTilemapInfo", 1, 1),
+    ("CameraLockArea", "ValidateBounds", 1, 1),
+    ("CameraTarget", "Update", 1, 4),
+    ("CameraTarget", "EnterLockZone", 1, 1),
+    ("CameraTarget", "ExitLockZone", 1, 1),
+)
 
 TOP_TOUCH_BUTTONS = frozenset(
     {
@@ -224,6 +260,196 @@ def _unity_targets(path: Path) -> list[dict[str, Any]]:
     return targets
 
 
+def _script_component_reader(
+    bundle: Any, assets_file: Any, game_object_path: str, class_name: str
+) -> list[Any]:
+    """Find a component by hierarchy and MonoScript identity.
+
+    This Unity build stores MonoScripts in globalgamemanagers.assets and omits
+    embedded type trees for those components. Resolving the script pointer is
+    still semantic and avoids depending on a component path ID or file offset.
+    """
+
+    global_assets = bundle.files.get("globalgamemanagers.assets")
+    if global_assets is None:
+        return []
+    transforms = _path_readers(assets_file, "RectTransform", game_object_path)
+    if len(transforms) != 1:
+        return []
+    game_object = transforms[0].read().m_GameObject.read()
+    matches: list[Any] = []
+    for component in game_object.m_Component:
+        reader = assets_file.objects.get(component.component.path_id)
+        if reader is None or reader.type.name != "MonoBehaviour":
+            continue
+        raw = reader.get_raw_data()
+        if len(raw) < 28:
+            continue
+        script_file_id, script_path_id = struct.unpack_from("<iq", raw, 16)
+        if script_file_id != 1:
+            continue
+        script_reader = global_assets.objects.get(script_path_id)
+        if script_reader is None or script_reader.type.name != "MonoScript":
+            continue
+        try:
+            if script_reader.read().m_ClassName == class_name:
+                matches.append(reader)
+        except Exception:
+            continue
+    return matches
+
+
+def _disclaimer_scaler_state(raw: bytes | bytearray) -> tuple[str, int | None]:
+    # Expand mode already preserves the full 1920-pixel horizontal reference
+    # on a 4:3 display; the child description is the part that needs fitting.
+    expected = struct.pack(
+        "<iffffif", 1, 100.0, 1.0, 1920.0, 1080.0, 1, 0.0
+    )
+    offsets = _byte_offsets(raw, expected)
+    if len(offsets) == 1:
+        return "patched", offsets[0]
+    if len(offsets) > 1:
+        return "ambiguous", None
+    return "unsupported", None
+
+
+def _mono_unity_targets(path: Path) -> list[dict[str, Any]]:
+    UnityPy = _unitypy()
+    environment = UnityPy.load(str(path))
+    bundle = _bundle_file(environment)
+    targets: list[dict[str, Any]] = []
+    try:
+        level0 = bundle.files.get("level0")
+        if level0 is None:
+            targets.append(_target("Mono intro: disclaimer scene", "unsupported"))
+        else:
+            scalers = _script_component_reader(bundle, level0, "Canvas", "CanvasScaler")
+            if len(scalers) != 1:
+                state = "ambiguous" if len(scalers) > 1 else "unsupported"
+                targets.append(
+                    _target("Mono intro: expanding canvas", state, matches=len(scalers))
+                )
+            else:
+                state, _ = _disclaimer_scaler_state(scalers[0].get_raw_data())
+                targets.append(_target("Mono intro: expanding canvas", state))
+
+            descriptions = _path_readers(
+                level0, "RectTransform", "Canvas/Disclaimer/Description"
+            )
+            if len(descriptions) != 1:
+                state = "ambiguous" if len(descriptions) > 1 else "unsupported"
+                targets.append(
+                    _target("Mono intro: disclaimer text fit", state, matches=len(descriptions))
+                )
+            else:
+                tree = descriptions[0].read_typetree()
+                scale = tree["m_LocalScale"]
+                states = {
+                    _value_state(scale[axis], DISCLAIMER_SCALE_SOURCE, DISCLAIMER_SCALE_TARGET)
+                    for axis in ("x", "y")
+                }
+                if states == {"original"}:
+                    state = "original"
+                elif states == {"patched"}:
+                    state = "patched"
+                elif states <= {"original", "patched"}:
+                    state = "original"
+                else:
+                    state = "unsupported"
+                targets.append(
+                    _target(
+                        "Mono intro: disclaimer text fit",
+                        state,
+                        scale_x=float(scale["x"]),
+                        scale_y=float(scale["y"]),
+                    )
+                )
+
+        resources = bundle.files.get("resources.assets")
+        if resources is None:
+            targets.append(_target("Mono resources.assets", "unsupported"))
+        else:
+            cameras = _path_readers(resources, "Camera", "_GameCameras/HudCamera")
+            if len(cameras) != 1:
+                state = "ambiguous" if len(cameras) > 1 else "unsupported"
+                targets.append(_target("Mono HUD camera", state, matches=len(cameras)))
+            else:
+                value = cameras[0].read_typetree()["orthographic size"]
+                targets.append(
+                    _target(
+                        "Mono HUD camera",
+                        _value_state(value, HUD_ORTHO_SOURCE, HUD_ORTHO_TARGET),
+                        value=float(value),
+                    )
+                )
+
+            canvases = _path_readers(
+                resources, "Transform", "_GameCameras/HudCamera/Hud Canvas"
+            )
+            if len(canvases) != 1:
+                state = "ambiguous" if len(canvases) > 1 else "unsupported"
+                targets.append(_target("Mono HUD top edge", state, matches=len(canvases)))
+            else:
+                value = canvases[0].read_typetree()["m_LocalPosition"]["y"]
+                targets.append(
+                    _target(
+                        "Mono HUD top edge",
+                        _value_state(value, HUD_CANVAS_SOURCE_Y, HUD_CANVAS_TARGET_Y),
+                        value=float(value),
+                    )
+                )
+
+            for name in sorted(MONO_TOUCH_BUTTONS):
+                path_name = f"_InControlManager/TouchControls/{name}"
+                readers = _path_readers(resources, "RectTransform", path_name)
+                target_name = f"Mono touch top edge: {name}"
+                if len(readers) != 1:
+                    state = "ambiguous" if len(readers) > 1 else "unsupported"
+                    targets.append(_target(target_name, state, matches=len(readers)))
+                    continue
+                tree = readers[0].read_typetree()
+                min_y = float(tree["m_AnchorMin"]["y"])
+                max_y = float(tree["m_AnchorMax"]["y"])
+                position_y = float(tree["m_AnchoredPosition"]["y"])
+                if (
+                    _near(min_y, 0.5)
+                    and _near(max_y, 0.5)
+                    and _near(position_y, 125.0)
+                ):
+                    state = "original"
+                elif (
+                    _near(min_y, 1.0)
+                    and _near(max_y, 1.0)
+                    and _near(position_y, 125.0 - REFERENCE_UI_HALF_HEIGHT)
+                ):
+                    state = "patched"
+                else:
+                    state = "unsupported"
+                targets.append(
+                    _target(
+                        target_name,
+                        state,
+                        anchor_min_y=min_y,
+                        anchor_max_y=max_y,
+                        anchored_position_y=position_y,
+                    )
+                )
+    finally:
+        _close_unity(bundle, environment)
+    return targets
+
+
+def _byte_offsets(data: bytes | bytearray, needle: bytes) -> list[int]:
+    offsets: list[int] = []
+    cursor = 0
+    while True:
+        offset = data.find(needle, cursor)
+        if offset < 0:
+            return offsets
+        offsets.append(offset)
+        cursor = offset + len(needle)
+
+
 def _float_offsets(data: bytes | bytearray, value: float) -> list[int]:
     needle = struct.pack("<f", value)
     offsets: list[int] = []
@@ -316,6 +542,185 @@ def _armv7_bound_cluster(
     return _target("armeabi-v7a: camera bounds", "unsupported", matches=0), []
 
 
+def _managed_dependencies():
+    try:
+        import dnfile  # type: ignore
+        from dncil.cil.body.reader import read_method_body_from_bytes  # type: ignore
+    except ImportError as exc:  # pragma: no cover - dependency error is user-facing
+        raise PatchError("dnfile and dncil are required for the Hollow Knight Mono patch") from exc
+    return dnfile, read_method_body_from_bytes
+
+
+def _metadata_type_name(row: Any) -> str:
+    return f"{row.TypeNamespace}.{row.TypeName}".strip(".")
+
+
+class _ManagedAssembly:
+    def __init__(self, path: Path):
+        dnfile, self._read_body = _managed_dependencies()
+        self.path = path
+        self.pe = dnfile.dnPE(str(path))
+        if self.pe.net is None:
+            raise PatchError("Assembly-CSharp.dll is not a managed .NET assembly")
+        self.method_owners = {
+            id(index.row): _metadata_type_name(type_def)
+            for type_def in self.pe.net.mdtables.TypeDef
+            for index in type_def.MethodList
+        }
+        self.field_owners = {
+            id(index.row): _metadata_type_name(type_def)
+            for type_def in self.pe.net.mdtables.TypeDef
+            for index in type_def.FieldList
+        }
+
+    def methods(self, type_name: str, method_name: str) -> list[tuple[int, Any]]:
+        matches: list[tuple[int, Any]] = []
+        for type_def in self.pe.net.mdtables.TypeDef:
+            if _metadata_type_name(type_def) != type_name:
+                continue
+            for index in type_def.MethodList:
+                method = index.row
+                if str(method.Name) != method_name or not method.Rva:
+                    continue
+                body = self._read_body(self.pe.get_data(method.Rva, 1 << 20))
+                matches.append((self.pe.get_offset_from_rva(method.Rva), body))
+        return matches
+
+    def field_name(self, operand: Any) -> str | None:
+        value = getattr(operand, "value", None)
+        if not isinstance(value, int) or value >> 24 != 0x04:
+            return None
+        row_id = value & 0xFFFFFF
+        table = self.pe.net.mdtables.Field
+        if not 1 <= row_id <= len(table.rows):
+            return None
+        row = table.rows[row_id - 1]
+        return f"{self.field_owners.get(id(row), '?')}::{row.Name}"
+
+
+def _managed_float_target(
+    assembly: _ManagedAssembly,
+    type_name: str,
+    method_name: str,
+    expected_methods: int,
+    expected_literals: int,
+    source: float,
+    target: float,
+    label: str,
+) -> tuple[dict[str, Any], list[tuple[int, bytes, bytes]]]:
+    methods = assembly.methods(type_name, method_name)
+    if len(methods) != expected_methods:
+        state = "ambiguous" if len(methods) > expected_methods else "unsupported"
+        return _target(label, state, methods=len(methods)), []
+
+    source_hits: list[tuple[int, bytes, bytes]] = []
+    target_hits = 0
+    for method_offset, body in methods:
+        for instruction in body.instructions:
+            if instruction.opcode.name != "ldc.r4":
+                continue
+            value = instruction.operand
+            operand_offset = method_offset + instruction.offset + len(instruction.opcode_bytes)
+            if _near(value, source):
+                source_hits.append(
+                    (
+                        operand_offset,
+                        bytes(instruction.operand_bytes),
+                        struct.pack("<f", target),
+                    )
+                )
+            elif _near(value, target):
+                target_hits += 1
+
+    recognized = len(source_hits) + target_hits
+    if recognized != expected_literals:
+        state = "ambiguous" if recognized > expected_literals else "unsupported"
+        return _target(
+            label,
+            state,
+            original_matches=len(source_hits),
+            patched_matches=target_hits,
+        ), []
+    state = "patched" if target_hits == expected_literals else "original"
+    return _target(
+        label,
+        state,
+        original_matches=len(source_hits),
+        patched_matches=target_hits,
+    ), source_hits
+
+
+def _managed_black_bars_target(
+    assembly: _ManagedAssembly,
+) -> tuple[dict[str, Any], list[tuple[int, bytes, bytes]]]:
+    methods = assembly.methods("ForceCameraAspect", "AutoScaleViewport")
+    if len(methods) != 1:
+        state = "ambiguous" if len(methods) > 1 else "unsupported"
+        return _target("Mono full viewport branch", state, methods=len(methods)), []
+    method_offset, body = methods[0]
+    instructions = body.instructions
+    field_indices = [
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opcode.name == "ldsfld"
+        and assembly.field_name(instruction.operand) == "ModManagerSettings::BlackBars"
+    ]
+    if len(field_indices) != 1:
+        state = "ambiguous" if len(field_indices) > 1 else "unsupported"
+        return _target("Mono full viewport branch", state, matches=len(field_indices)), []
+    index = field_indices[0]
+    following = instructions[index + 1 : index + 3]
+    if following and following[0].opcode.name in ("brtrue", "brtrue.s"):
+        branch = following[0]
+        offset = method_offset + branch.offset
+        original = bytes(branch.opcode_bytes) + bytes(branch.operand_bytes)
+        replacement = b"\x26" + b"\x00" * (len(original) - 1)
+        return _target("Mono full viewport branch", "original"), [
+            (offset, original, replacement)
+        ]
+    if len(following) == 2 and following[0].opcode.name == "pop" and following[1].opcode.name == "nop":
+        return _target("Mono full viewport branch", "patched"), []
+    return _target("Mono full viewport branch", "unsupported"), []
+
+
+def _managed_targets(
+    path: Path,
+) -> tuple[list[dict[str, Any]], list[tuple[int, bytes, bytes]]]:
+    assembly = _ManagedAssembly(path)
+    targets: list[dict[str, Any]] = []
+    edits: list[tuple[int, bytes, bytes]] = []
+    for type_name, method_name, method_count, literal_count in MANAGED_ASPECT_METHODS:
+        target, method_edits = _managed_float_target(
+            assembly,
+            type_name,
+            method_name,
+            method_count,
+            literal_count,
+            SOURCE_ASPECT,
+            TARGET_ASPECT,
+            f"Mono aspect: {type_name}.{method_name}",
+        )
+        targets.append(target)
+        edits.extend(method_edits)
+    branch, branch_edits = _managed_black_bars_target(assembly)
+    targets.append(branch)
+    edits.extend(branch_edits)
+    for type_name, method_name, method_count, literal_count in MANAGED_BOUND_METHODS:
+        target, method_edits = _managed_float_target(
+            assembly,
+            type_name,
+            method_name,
+            method_count,
+            literal_count,
+            CAMERA_LIMIT_SOURCE,
+            CAMERA_LIMIT_TARGET,
+            f"Mono camera bounds: {type_name}.{method_name}",
+        )
+        targets.append(target)
+        edits.extend(method_edits)
+    return targets, edits
+
+
 def _native_targets(entry: str, path: Path) -> list[dict[str, Any]]:
     data = path.read_bytes()
     architecture = "arm64-v8a" if entry == ARM64_ENTRY else "armeabi-v7a"
@@ -360,28 +765,51 @@ def probe(extracted: dict[str, Path]) -> dict[str, Any]:
         return {"state": "unsupported", "targets": targets}
 
     targets: list[dict[str, Any]] = []
-    try:
-        targets.extend(_unity_targets(extracted[DATA_ENTRY]))
-    except Exception as exc:
-        targets.append(_target("Unity data bundle", "unsupported", reason=str(exc)))
+    mono_present = extracted.get(MONO_ENTRY) is not None and Path(
+        extracted[MONO_ENTRY]
+    ).is_file()
     native_entries = [
         entry
         for entry in SUPPORTED_NATIVE_ENTRIES
         if extracted.get(entry) is not None and Path(extracted[entry]).is_file()
     ]
-    if not native_entries:
+    if mono_present and native_entries:
         targets.append(
             _target(
-                "supported IL2CPP library",
-                "unsupported",
-                reason="APK contains neither ARM64 nor ARMv7 libil2cpp.so",
+                "Unity scripting runtime",
+                "ambiguous",
+                reason="APK contains both Mono Assembly-CSharp.dll and IL2CPP libraries",
             )
         )
-    for entry in native_entries:
+        return {"state": _overall(targets), "targets": targets}
+    if mono_present:
         try:
-            targets.extend(_native_targets(entry, extracted[entry]))
+            targets.extend(_mono_unity_targets(extracted[DATA_ENTRY]))
         except Exception as exc:
-            targets.append(_target(entry, "unsupported", reason=str(exc)))
+            targets.append(_target("Mono Unity data bundle", "unsupported", reason=str(exc)))
+        try:
+            managed_targets, _ = _managed_targets(extracted[MONO_ENTRY])
+            targets.extend(managed_targets)
+        except Exception as exc:
+            targets.append(_target(MONO_ENTRY, "unsupported", reason=str(exc)))
+    elif native_entries:
+        try:
+            targets.extend(_unity_targets(extracted[DATA_ENTRY]))
+        except Exception as exc:
+            targets.append(_target("Unity data bundle", "unsupported", reason=str(exc)))
+        for entry in native_entries:
+            try:
+                targets.extend(_native_targets(entry, extracted[entry]))
+            except Exception as exc:
+                targets.append(_target(entry, "unsupported", reason=str(exc)))
+    else:
+        targets.append(
+            _target(
+                "supported Unity scripting runtime",
+                "unsupported",
+                reason="APK contains neither Mono Assembly-CSharp.dll nor a supported IL2CPP library",
+            )
+        )
     return {"state": _overall(targets), "targets": targets}
 
 
@@ -433,6 +861,92 @@ def _patch_unity(source: Path, destination: Path) -> bool:
     finally:
         _close_unity(bundle, environment)
     return changed
+
+
+def _patch_unity_mono(source: Path, destination: Path) -> bool:
+    UnityPy = _unitypy()
+    environment = UnityPy.load(str(source))
+    bundle = _bundle_file(environment)
+    changed = False
+    try:
+        level0 = bundle.files["level0"]
+        scaler = _script_component_reader(bundle, level0, "Canvas", "CanvasScaler")[0]
+        raw = bytearray(scaler.get_raw_data())
+        state, _ = _disclaimer_scaler_state(raw)
+        if state != "patched":
+            raise PatchError("Hollow Knight Mono disclaimer CanvasScaler changed")
+
+        description = _path_readers(
+            level0, "RectTransform", "Canvas/Disclaimer/Description"
+        )[0]
+        tree = description.read_typetree()
+        scale = tree["m_LocalScale"]
+        scale_changed = False
+        for axis in ("x", "y"):
+            if _near(scale[axis], DISCLAIMER_SCALE_SOURCE):
+                scale[axis] = DISCLAIMER_SCALE_TARGET
+                scale_changed = True
+        if scale_changed:
+            description.save_typetree(tree)
+            changed = True
+
+        resources = bundle.files["resources.assets"]
+        camera = _path_readers(resources, "Camera", "_GameCameras/HudCamera")[0]
+        tree = camera.read_typetree()
+        if _near(tree["orthographic size"], HUD_ORTHO_SOURCE):
+            tree["orthographic size"] = HUD_ORTHO_TARGET
+            camera.save_typetree(tree)
+            changed = True
+
+        canvas = _path_readers(
+            resources, "Transform", "_GameCameras/HudCamera/Hud Canvas"
+        )[0]
+        tree = canvas.read_typetree()
+        if _near(tree["m_LocalPosition"]["y"], HUD_CANVAS_SOURCE_Y):
+            tree["m_LocalPosition"]["y"] = HUD_CANVAS_TARGET_Y
+            canvas.save_typetree(tree)
+            changed = True
+
+        for name in MONO_TOUCH_BUTTONS:
+            reader = _path_readers(
+                resources,
+                "RectTransform",
+                f"_InControlManager/TouchControls/{name}",
+            )[0]
+            tree = reader.read_typetree()
+            if (
+                _near(tree["m_AnchorMin"]["y"], 0.5)
+                and _near(tree["m_AnchorMax"]["y"], 0.5)
+                and _near(tree["m_AnchoredPosition"]["y"], 125.0)
+            ):
+                tree["m_AnchorMin"]["y"] = 1.0
+                tree["m_AnchorMax"]["y"] = 1.0
+                tree["m_AnchoredPosition"]["y"] = 125.0 - REFERENCE_UI_HALF_HEIGHT
+                reader.save_typetree(tree)
+                changed = True
+
+        if changed:
+            destination.write_bytes(bundle.save(packer="original"))
+    finally:
+        _close_unity(bundle, environment)
+    return changed
+
+
+def _patch_managed(source: Path, destination: Path) -> bool:
+    targets, edits = _managed_targets(source)
+    if any(target["state"] in ("unsupported", "ambiguous") for target in targets):
+        raise PatchError("Hollow Knight Mono managed targets changed during patching")
+    if not edits:
+        return False
+    data = bytearray(source.read_bytes())
+    for offset, original, replacement in edits:
+        if data[offset : offset + len(original)] != original:
+            raise PatchError("Hollow Knight Mono managed target changed during patching")
+        if len(original) != len(replacement):
+            raise PatchError("Hollow Knight Mono managed edit is not length preserving")
+        data[offset : offset + len(original)] = replacement
+    destination.write_bytes(data)
+    return True
 
 
 def _replace_offsets(data: bytearray, offsets: list[int], target: float) -> None:
@@ -489,18 +1003,32 @@ def apply(extracted: dict[str, Path], output_dir: Path) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     replacements: dict[str, Path] = {}
     data_output = output_dir / "data.unity3d"
-    if _patch_unity(extracted[DATA_ENTRY], data_output):
+    mono_present = extracted.get(MONO_ENTRY) is not None and Path(
+        extracted[MONO_ENTRY]
+    ).is_file()
+    unity_changed = (
+        _patch_unity_mono(extracted[DATA_ENTRY], data_output)
+        if mono_present
+        else _patch_unity(extracted[DATA_ENTRY], data_output)
+    )
+    if unity_changed:
         replacements[DATA_ENTRY] = data_output
 
-    for entry, filename in (
-        (ARM64_ENTRY, "libil2cpp-arm64-v8a.so"),
-        (ARMV7_ENTRY, "libil2cpp-armeabi-v7a.so"),
-    ):
-        if extracted.get(entry) is None or not Path(extracted[entry]).is_file():
-            continue
-        destination = output_dir / filename
-        if _patch_native(extracted[entry], destination, entry):
-            replacements[entry] = destination
+    if mono_present:
+        managed_output = output_dir / "Assembly-CSharp.dll"
+        if _patch_managed(extracted[MONO_ENTRY], managed_output):
+            replacements[MONO_ENTRY] = managed_output
+
+    if not mono_present:
+        for entry, filename in (
+            (ARM64_ENTRY, "libil2cpp-arm64-v8a.so"),
+            (ARMV7_ENTRY, "libil2cpp-armeabi-v7a.so"),
+        ):
+            if extracted.get(entry) is None or not Path(extracted[entry]).is_file():
+                continue
+            destination = output_dir / filename
+            if _patch_native(extracted[entry], destination, entry):
+                replacements[entry] = destination
 
     verification_input = dict(extracted)
     verification_input.update(replacements)
