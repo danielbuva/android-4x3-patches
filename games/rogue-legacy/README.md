@@ -25,9 +25,11 @@ assumptions:
 - BlitWorks and Cellar Door Games splash/logo placement
 - title rendering, post-processing, fades, camera, selections, menus,
   copyright text, loading text, and touch-button anchors
-- options-menu background centering with its relative slide distances preserved
+- options-menu parchment and final option-row positions centered together
 - a 1220×890 map/teleporter render surface, with its camera, room labels, title
-  normalization, and bottom legend moved onto the 990-line coordinate system
+  mapping, and bottom legend moved onto the correct coordinate systems; its
+  backing render target is the complete 1320×990 screen rather than a
+  rect-derived 1320×956 intermediate
 - pause-menu icon layout
 - touch-coordinate conversion through the taller virtual screen
 - an initial virtual-screen metrics refresh, so the 1320x990 dimensions reach
@@ -112,6 +114,10 @@ The proprietary-free test suite verifies named XABA assembly resolution,
 XALZ/LZ4 decode and read-back-safe repacking, original/patched/mixed states,
 idempotence, unique-context enforcement, length-preserving managed edits, and
 silent handling of absent or unfamiliar optional branding.
+
+The latest option-row and full-height map-target refinement was recognized
+from both the clean reference and the prior patched state, then rebuilt,
+signed, installed in place on adopted storage, and cold-launched successfully.
 
 The audited `1.4.1-r2` structures are the basis for the production targets.
 Full device-side visual verification across gameplay, title, options, pause,

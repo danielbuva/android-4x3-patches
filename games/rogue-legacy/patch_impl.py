@@ -147,7 +147,11 @@ _REGIONS = (
             # parchment. Clean 360 values already satisfy the corrected state;
             # 495 is accepted only so that earlier patch outputs can upgrade.
             _Change("options list slide distance", 0x9F, _r4(495), _r4(360)),
-            _Change("options return slide distance", 0xE6, _r4(495), _r4(360)),
+            # The return tween deliberately travels 135 pixels farther than
+            # the initial upward offset. That moves the final option rows with
+            # the parchment from the old 360-line center to the new 495-line
+            # center without changing this tiny method's fixed-size layout.
+            _Change("options return slide distance", 0xE6, _r4(360), _r4(495)),
         ),
         (
             (0x3A, _hx("061e00000673010000062580")),
@@ -179,8 +183,20 @@ _REGIONS = (
     ),
     # Map and teleporter modes share MapScreen. Expand their alpha-map surface
     # from the old 1220x620 inset to the equivalent 1220x890 inset in the
-    # 1320x990 virtual screen. Keep camera, labels, and the legend on the same
-    # taller coordinate system so no intermediate target is stretched.
+    # 1320x990 virtual screen. MapObj must also allocate the complete 990-line
+    # render target; otherwise its rect-derived fallback is only 956 lines and
+    # the final presentation is scaled slightly in the vertical direction.
+    _Region(
+        "MapObj.InitializeAlphaMap",
+        _hx("0f01284d01000a1f105828ec01000a0a"),
+        0x5,
+        _hx("0f01284e01000a1f105828ec01000a0b"),
+        (
+            _Change(
+                "map and teleporter render-target height", 0, _i4(720), _i4(990)
+            ),
+        ),
+    ),
     _Region(
         "MapScreen..ctor",
         _hx("027b81130004187d99180004027b81130004"),
@@ -193,7 +209,10 @@ _REGIONS = (
         _hx("057bc000000a"),
         0x5,
         _hx("5b22000000425a73ea00000a"),
-        (_Change("map title vertical normalization", 0, _r4(720), _r4(990)),),
+        # This is the 720-pixel world-room grid, not the display height. An
+        # earlier patch changed it to 990 and is accepted here only so those
+        # outputs can be upgraded back to the correct 1:1 map coordinate.
+        (_Change("map title world-grid normalization", 0, _r4(990), _r4(720)),),
     ),
     _Region(
         "MapScreen.LoadContent",
