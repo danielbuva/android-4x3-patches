@@ -139,7 +139,7 @@ def test_stalker_settings_font_sizes_are_scaled_and_idempotently_classified() ->
     stalker = _module()
     raw = bytearray(stalker._TEXT_FONT_SIZE_OFFSET + 4)
 
-    expected = {11: 15, 12: 16, 14: 19, 15: 20}
+    expected = {11: 19, 12: 21, 14: 24, 15: 26}
     assert stalker._SETTINGS_FONT_SIZES == expected
     for original, patched in expected.items():
         struct.pack_into("<i", raw, stalker._TEXT_FONT_SIZE_OFFSET, original)
@@ -150,7 +150,11 @@ def test_stalker_settings_font_sizes_are_scaled_and_idempotently_classified() ->
         struct.pack_into("<i", raw, stalker._TEXT_FONT_SIZE_OFFSET, patched)
         state, value = stalker._settings_font_state(raw)
         assert value == patched
-        assert state == ("ambiguous" if patched == 15 else "patched")
+        assert state == ("ambiguous" if patched == 19 else "patched")
+
+    for legacy in (16, 20):
+        struct.pack_into("<i", raw, stalker._TEXT_FONT_SIZE_OFFSET, legacy)
+        assert stalker._settings_font_state(raw) == ("original", legacy)
 
     struct.pack_into("<i", raw, stalker._TEXT_FONT_SIZE_OFFSET, 99)
     assert stalker._settings_font_state(raw) == ("unsupported", 99)

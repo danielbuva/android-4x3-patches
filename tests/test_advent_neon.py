@@ -58,12 +58,44 @@ def test_advent_scripts_cover_camera_gui_and_presentation_postconditions() -> No
     ):
         assert patched_anchor in verified
 
-    assert 'instance.Y == 624' in original
-    assert 'pressAnyKeyInstances[0].Y = 684' in patch
-    assert 'instance.Y == 684' in verified
+    assert 'new { Id = 100013u, Y = 624' in original
+    assert 'matches[0].Y += 120' in patch
+    assert 'new { Id = 100013u, Y = 744' in verified
+    assert 'new { Id = 100019u, Name = "oEnemyPressStart", X = 320, Y = 208' in original
+    assert 'matches[0].Y += 60' in patch
+    assert 'new { Id = 100019u, Name = "oEnemyPressStart", X = 320, Y = 268' in verified
+    assert '"bgFlavorTopY + 120", 2' in verified
     assert 'spr_joybase' in original
     assert 'ReplaceOnce(mobileDraw, mobileDraw, "exit;"' in patch
     assert 'RequireCode("gml_Object_obj_mobilecontrols_Draw_64", "exit;")' in verified
+
+
+def test_advent_optional_runner_splash_cleanup_is_exact_and_non_gating(tmp_path: Path) -> None:
+    import importlib.util
+    import sys
+
+    spec = importlib.util.spec_from_file_location(
+        "advent_patch_test", MODULE_DIR / "patch_impl.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    source = tmp_path / "splash.png"
+    from PIL import Image
+
+    Image.new("RGB", (1024, 768), (12, 34, 56)).save(source)
+    expected = (module._SPLASHES["assets/splash.png"][0], (1024, 768), "RGB")
+    assert module._neutralized_splash(source, expected) is None
+
+    data = source.read_bytes()
+    recognized = (module.hashlib.sha256(data).hexdigest(), (1024, 768), "RGB")
+    output = module._neutralized_splash(source, recognized)
+    assert output is not None
+    with Image.open(module.BytesIO(output)) as image:
+        assert image.size == (1024, 768)
+        assert image.getbbox() is None
 
 
 def test_every_advent_mutation_has_one_named_verifier_postcondition() -> None:

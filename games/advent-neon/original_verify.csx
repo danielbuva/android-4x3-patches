@@ -37,15 +37,53 @@ Require(Data.Rooms.Count == 86, "unexpected room count");
 
 var controlsRoom = Data.Rooms.ByName("controls");
 Require(controlsRoom != null, "missing controls title room");
-var pressAnyKeyInstances = controlsRoom.GameObjects.Where(instance =>
-    instance.InstanceID == 100013 &&
-    instance.ObjectDefinition != null &&
-    instance.ObjectDefinition.Name.Content == "oText" &&
-    instance.CreationCode != null &&
-    instance.CreationCode.Name.Content == "gml_RoomCC_controls_0_Create" &&
-    instance.X == 640 && instance.Y == 624).ToList();
-Require(pressAnyKeyInstances.Count == 1,
-        "press-any-key original title instance changed");
+foreach (var expected in new[]
+{
+    new { Id = 100013u, Y = 624, Code = "gml_RoomCC_controls_0_Create" },
+    new { Id = 100014u, Y = 32, Code = "gml_RoomCC_controls_1_Create" },
+    new { Id = 100015u, Y = 144, Code = "gml_RoomCC_controls_2_Create" },
+})
+    Require(controlsRoom.GameObjects.Count(instance =>
+        instance.InstanceID == expected.Id &&
+        instance.ObjectDefinition != null &&
+        instance.ObjectDefinition.Name.Content == "oText" &&
+        instance.CreationCode != null &&
+        instance.CreationCode.Name.Content == expected.Code &&
+        instance.X == 640 && instance.Y == expected.Y) == 1,
+        "controls guide original placement changed");
+
+var startRoom = Data.Rooms.ByName("start");
+Require(startRoom != null, "missing start title room");
+var startLayout = new[]
+{
+    new { Id = 100023u, Name = "oPlayer", X = 96, Y = 288 },
+    new { Id = 100027u, Name = "oWind", X = 640, Y = 320 },
+    new { Id = 100024u, Name = "oText", X = 320, Y = 160 },
+    new { Id = 100026u, Name = "fxSpeedLines", X = 320, Y = 224 },
+    new { Id = 100018u, Name = "oEnemyLogo", X = 320, Y = 96 },
+    new { Id = 100019u, Name = "oEnemyPressStart", X = 320, Y = 208 },
+    new { Id = 100020u, Name = "oEnemyCopyright", X = 32, Y = 352 },
+};
+foreach (var expected in startLayout)
+    Require(startRoom.GameObjects.Count(instance =>
+        instance.InstanceID == expected.Id &&
+        instance.ObjectDefinition != null &&
+        instance.ObjectDefinition.Name.Content == expected.Name &&
+        instance.X == expected.X && instance.Y == expected.Y) == 1,
+        "title-scene original placement changed");
+foreach (var expected in new[]
+{
+    new { Id = 100028u, Name = "o_wall", X = 1056, Y = 448 },
+    new { Id = 100029u, Name = "o_wall", X = 992, Y = 0 },
+    new { Id = 100025u, Name = "oCamera", X = 320, Y = 180 },
+    new { Id = 100017u, Name = "oStartSplash", X = 608, Y = 352 },
+})
+    Require(startRoom.GameObjects.Count(instance =>
+        instance.InstanceID == expected.Id &&
+        instance.ObjectDefinition != null &&
+        instance.ObjectDefinition.Name.Content == expected.Name &&
+        instance.X == expected.X && instance.Y == expected.Y) == 1,
+        "fixed title-scene original layout changed");
 
 int enabledViews = 0;
 foreach (var room in Data.Rooms)
@@ -120,6 +158,9 @@ foreach (string name in new[]
 }
 
 RequireCode("gml_Object_oStartSplash_Draw_64", "var yy = 360;");
+RequireCode("gml_Object_oTakeABreak_Draw_64", "y = 360;");
+RequireCode("gml_Object_oTakeABreak_Draw_64", "bgFlavorTopY", 2);
+RequireCode("gml_Object_oTakeABreak_Draw_64", "bgFlavorBotY", 2);
 RequireCode("gml_Object_game_cutscene_Draw_64",
             "draw_rectangle_color(0, 0, 1280, 720, c, c, c, c, false);");
 RequireCode("gml_Object_game_cutscene_Draw_64",

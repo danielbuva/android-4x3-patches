@@ -79,6 +79,7 @@ class _BigfilePatch:
     asset_path: str
     original: bytes
     replacement: bytes
+    root_transform: bool = False
 
 
 def _change(name: str, offset: int, original: str, replacement: str) -> _BinaryPatch:
@@ -168,13 +169,28 @@ _MANAGED_PATCHES = _OPTIONAL_CLEANUP_PATCHES + _DISPLAY_PATCHES
 
 
 def _bigfile_change(
-    name: str, asset_path: str, original: str, replacement: str
+    name: str,
+    asset_path: str,
+    original: str,
+    replacement: str,
+    *,
+    root_transform: bool = False,
 ) -> _BigfilePatch:
     before = bytes.fromhex(original)
     after = bytes.fromhex(replacement)
     if len(before) != len(after):  # pragma: no cover - module authoring invariant
         raise ValueError(f"{name}: in-place bigfile patch length changed")
-    return _BigfilePatch(name, asset_path, before, after)
+    return _BigfilePatch(name, asset_path, before, after, root_transform)
+
+
+def _bigfile_root_height(name: str, asset_path: str) -> _BigfilePatch:
+    return _bigfile_change(
+        name,
+        asset_path,
+        "0a 0a 0d 00 00 f0 44 15 00 00 87 44",
+        "0a 0a 0d 00 00 f0 44 15 00 00 b4 44",
+        root_transform=True,
+    )
 
 
 # The mobile title and main-menu screens are composed from protobuf-net GUI
@@ -272,6 +288,53 @@ _BIGFILE_PATCHES = (
         52 0a 0d 00 00 00 00 15 00 00 00 00 58 00
         """,
     ),
+    # These named pre-game records retained a 1920x1080 outer root even after
+    # the renderer moved to 1920x1440. Change only that outer transform; nested
+    # templates, artwork, animations, and the gameplay HUD remain untouched.
+    _bigfile_root_height("title-screen-root-height", "gui/menus/gui_title_screen"),
+    _bigfile_root_height(
+        "main-menu-background-root-height", "gui/menus/main_menu_background"
+    ),
+    _bigfile_root_height(
+        "main-menu-screen-root-height", "gui/menus/gui_main_menu_screen"
+    ),
+    _bigfile_root_height(
+        "mobile-main-menu-screen-root-height",
+        "gui/menus/mobile/gui_main_menu_screen",
+    ),
+    _bigfile_root_height("main-menu-sub-root-height", "gui/menus/gui_main_sub"),
+    _bigfile_root_height(
+        "mobile-main-menu-sub-root-height", "gui/menus/mobile/gui_main_sub"
+    ),
+    _bigfile_root_height(
+        "arcade-difficulty-root-height", "gui/menus/gui_main_arcade_difficulty"
+    ),
+    _bigfile_root_height(
+        "mobile-arcade-difficulty-root-height",
+        "gui/menus/mobile/gui_main_arcade_difficulty",
+    ),
+    _bigfile_root_height(
+        "new-game-difficulty-root-height", "gui/menus/popup_newgame_difficulty"
+    ),
+    _bigfile_root_height(
+        "mobile-new-game-difficulty-root-height",
+        "gui/menus/mobile/popup_newgame_difficulty",
+    ),
+    _bigfile_root_height(
+        "character-select-root-height", "gui/menus/gui_menu_character_select"
+    ),
+    _bigfile_root_height(
+        "mobile-character-select-root-height",
+        "gui/menus/mobile/gui_menu_character_select",
+    ),
+    _bigfile_root_height(
+        "player-select-root-height", "gui/gui_player_select_screen"
+    ),
+    _bigfile_root_height("story-root-height", "gui/menus/gui_story"),
+    _bigfile_root_height("mobile-story-root-height", "gui/menus/mobile/gui_story"),
+    _bigfile_root_height("cutscene-skip-root-height", "gui/gui_cutscene_skip"),
+    _bigfile_root_height("loading-screen-root-height", "gui/gui_loading_screen"),
+    _bigfile_root_height("loading-overlay-root-height", "gui/gui_loading_overlay"),
 )
 
 _BIGFILE_MAX_RAW_SIZE = 256 * 1024 * 1024
@@ -542,16 +605,33 @@ def _bigfile_patch_locations(
         payload = raw[
             entry.payload_offset : entry.payload_offset + entry.payload_size
         ]
-        original_count = payload.count(patch.original)
-        patched_count = payload.count(patch.replacement)
-        if (original_count, patched_count) == (1, 0):
-            state = "original"
-            local_offset = payload.find(patch.original)
-        elif (original_count, patched_count) == (0, 1):
-            state = "patched"
-            local_offset = payload.find(patch.replacement)
+        if patch.root_transform:
+            if not payload or payload[0] != 0x32:
+                return "unsupported", ()
+            outer_size, local_offset = _read_7bit_int(payload, 1, len(payload))
+            if (
+                outer_size < len(patch.original)
+                or local_offset + outer_size > len(payload)
+            ):
+                return "unsupported", ()
+            actual = payload[local_offset : local_offset + len(patch.original)]
+            if actual == patch.original:
+                state = "original"
+            elif actual == patch.replacement:
+                state = "patched"
+            else:
+                return "unsupported", ()
         else:
-            return "unsupported", ()
+            original_count = payload.count(patch.original)
+            patched_count = payload.count(patch.replacement)
+            if (original_count, patched_count) == (1, 0):
+                state = "original"
+                local_offset = payload.find(patch.original)
+            elif (original_count, patched_count) == (0, 1):
+                state = "patched"
+                local_offset = payload.find(patch.replacement)
+            else:
+                return "unsupported", ()
         states.append(state)
         locations.append((patch, state, entry.payload_offset + local_offset))
     if len(set(states)) == 1:

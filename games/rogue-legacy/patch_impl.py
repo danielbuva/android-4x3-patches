@@ -142,8 +142,12 @@ _REGIONS = (
         _hx("0b1201286701000aa228060000062609"),
         (
             _Change("options enter tween center", 0x0, _r4(360), _r4(495)),
-            _Change("options list vertical origin", 0x9F, _r4(360), _r4(495)),
-            _Change("options return tween center", 0xE6, _r4(360), _r4(495)),
+            # These are relative slide distances, not screen centers. The
+            # previous 495 values left the option rows 135 pixels above their
+            # parchment. Clean 360 values already satisfy the corrected state;
+            # 495 is accepted only so that earlier patch outputs can upgrade.
+            _Change("options list slide distance", 0x9F, _r4(495), _r4(360)),
+            _Change("options return slide distance", 0xE6, _r4(495), _r4(360)),
         ),
         (
             (0x3A, _hx("061e00000673010000062580")),
@@ -158,7 +162,7 @@ _REGIONS = (
         _hx("0d1203286701000aa228060000062608"),
         (
             _Change("options exit container center", 0x0, _r4(360), _r4(495)),
-            _Change("options exit off-screen distance", 0x11D, _r4(-360), _r4(-495)),
+            _Change("options exit slide distance", 0x11D, _r4(-495), _r4(-360)),
         ),
         (
             (0x48, _hx("00000125167222240070a225")),
@@ -171,7 +175,16 @@ _REGIONS = (
         _hx("92130004066fcc03000a256ff9150006"),
         0x5,
         _hx("596ff81500060617580a06027b921300"),
-        (_Change("options layout half-height", 0, _r4(360), _r4(495)),),
+        (_Change("options layout slide distance", 0, _r4(495), _r4(360)),),
+    ),
+    # Map and teleporter modes share MapScreen. Keep their fixed map surface
+    # proportional and move only its center to the taller virtual screen.
+    _Region(
+        "MapScreen.LoadContent",
+        _hx("027b781300042200002544"),
+        0x5,
+        _hx("73ea00000a7dc00e0004"),
+        (_Change("map and teleporter surface center", 0, _r4(360), _r4(495)),),
     ),
     _Region(
         "PauseScreen.LayoutPauseIcons",

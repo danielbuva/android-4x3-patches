@@ -35,13 +35,19 @@ The Unity UI is updated alongside those render changes:
 - the author/credits and gameplay/pause reference canvases become 1920×1440
 - main-menu and pause-menu resolution labels show the new 4:3 choices
 - settings text in both the main and pause menus is enlarged proportionally
-  from the port's unusually small audited font sizes
+  from the port's unusually small audited font sizes; the current pass uses
+  19/21/24/26 point sizes and upgrades the earlier 15/16/19/20 pass
 - a recognized VK promotion button is hidden in the main and pause menus when
   its exact object, component, and listener are safely identified
 
 VK-button hiding is optional and source-specific. Missing or unfamiliar
 variants are preserved silently and never affect 4:3 compatibility. Shared
 APKVision cleanup is also optional and non-blocking.
+
+The tested build does not expose a safe English-language switch. Both settings
+scenes store their Russian labels directly in individual Unity UI Text objects
+rather than referencing a separate English localization payload. The patch
+therefore leaves language content unchanged instead of guessing translations.
 
 ## Usage
 

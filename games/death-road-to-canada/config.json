@@ -36,6 +36,8 @@
       "Arm64-v8a, armeabi-v7a, or both are supported; every present libmain.so is inspected and any unrecognized ABI fails closed.",
       "Native edits are constrained by ELF mapping, canonical SHA-256, and exact original-or-patched instruction bytes.",
       "Flurry methods are selected by complete DEX class, method, and descriptor identities.",
+      "A physical-device analog pulse kept the same selection; the visible color-cycling highlight also continued after D-pad input and while idle, so no guarded controller defect was isolated.",
+      "A reported 48-pixel black strip was Android's visible status-bar inset; a cold launch restored and retained the full 1280x960 surface, so no renderer workaround is applied.",
       "Play Games and license checks are preserved; source-specific branding remains framework-owned."
     ]
   }

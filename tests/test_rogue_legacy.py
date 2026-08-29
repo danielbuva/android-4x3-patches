@@ -260,6 +260,17 @@ def test_rogue_legacy_production_targets_are_guarded_and_length_preserving() -> 
     assert any("Telegram" in item.name for item in rogue._STRING_TARGETS)
     assert any(item.optional for item in rogue._STRING_TARGETS)
     assert any(change.optional for region in rogue._REGIONS for change in region.changes)
+    changes = {
+        change.name: change
+        for region in rogue._REGIONS
+        for change in region.changes
+    }
+    assert changes["map and teleporter surface center"].original == rogue._r4(360)
+    assert changes["map and teleporter surface center"].patched == rogue._r4(495)
+    assert changes["options list slide distance"].original == rogue._r4(495)
+    assert changes["options list slide distance"].patched == rogue._r4(360)
+    assert changes["options exit slide distance"].original == rogue._r4(-495)
+    assert changes["options exit slide distance"].patched == rogue._r4(-360)
     for region in rogue._REGIONS:
         assert region.before and region.after
         for change in region.changes:

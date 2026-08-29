@@ -80,10 +80,15 @@ if you accept that testing status.
 
 - Other CPU architectures and changed `libmain.so` revisions are not yet
   supported.
-- A report of unintended movement from one Retroid controller could not be
-  reproduced with the controller at rest. The module does not alter SDL's
-  controller mapping or deadzone behavior; a reproducible input trace is
-  needed before changing that path safely.
+- The reported analog menu flicker was compared on the physical device using
+  injected analog-axis, D-pad, and idle captures. The selection stayed fixed;
+  the same corner/skull color animation continued after D-pad input and while
+  idle. No isolated dead-zone or repeat defect was found, so the module does
+  not alter normal SDL analog gameplay input.
+- A reported 48-pixel black strip was traced to Android temporarily leaving
+  its status-bar inset visible. A cold launch restored the full 1280x960
+  surface and it remained fullscreen through title-to-gameplay input. This
+  module does not alter the renderer to compensate for a transient system bar.
 - The audited DEX cleanup and splash are required targets for this module;
   builds that substantially change either entry need a new compatibility
   profile.

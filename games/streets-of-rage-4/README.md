@@ -24,6 +24,9 @@ This module converts the game's complete Android presentation path to 4:3:
 - The shared desktop/mobile **Back** and **Select** button legend is moved from
   the old widescreen bottom to the bottom of the 1920x1440 menu canvas. Other
   controls and touch targets retain their existing layout.
+- Named pre-game GUI roots are expanded from 1920x1080 to 1920x1440 across the
+  title, main menu, difficulty, character/player select, story, cutscene-skip,
+  and loading screens. Nested templates and the gameplay HUD remain untouched.
 - All 17 bundled intro, logo, boss, and stage videos are proportionally
   center-cropped from 1280 x 720 to 960 x 720. Their audio streams, frame rate,
   frame count, and duration are retained and checked after encoding.
@@ -57,10 +60,11 @@ partially patched managed states are completed, and unfamiliar bytes in the
 optional analytics-cleanup range are preserved.
 
 The menu patch does not require a whole-`bigfile` hash. It strictly parses the
-raw-DEFLATE archive, requires exactly one named GUI record and one exact
-original-or-patched transform context for each background and button-legend
-target, and preserves all other records. A missing, duplicated, or ambiguous
-required record is rejected without guessing.
+raw-DEFLATE archive, requires exactly one named GUI record, validates each
+outer root structurally, and requires one exact original-or-patched transform
+context for each background and button-legend target. All other records are
+preserved. A missing, duplicated, or ambiguous required record is rejected
+without guessing.
 
 Each of the 17 required videos must be recognized as either an original H.264
 1280 x 720 stream or an already-patched H.264 960 x 720 stream with square

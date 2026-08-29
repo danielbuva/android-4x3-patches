@@ -90,11 +90,25 @@ def _bigfile_record(asset_type: str, asset_path: str, payload: bytes) -> bytes:
 def _synthetic_bigfile_raw(module, states: tuple[str, ...]) -> bytes:
     assert len(states) == len(module._BIGFILE_PATCHES)
     records = [("OtherData", "unrelated/asset", b"preserve-me")]
+    grouped: dict[str, list[tuple[object, str]]] = {}
     for patch, state in zip(module._BIGFILE_PATCHES, states):
-        target = patch.original if state == "original" else patch.replacement
-        records.append(
-            ("GuiNodeData", patch.asset_path, b"prefix" + target + b"suffix")
-        )
+        grouped.setdefault(patch.asset_path, []).append((patch, state))
+    for asset_path, items in grouped.items():
+        root = next((item for item in items if item[0].root_transform), None)
+        body = bytearray()
+        if root is not None:
+            patch, state = root
+            body += patch.original if state == "original" else patch.replacement
+        for patch, state in items:
+            if patch.root_transform:
+                continue
+            target = patch.original if state == "original" else patch.replacement
+            body += b"prefix" + target + b"suffix"
+        if root is not None:
+            payload = b"\x32" + _seven_bit_int(len(body)) + bytes(body)
+        else:
+            payload = bytes(body)
+        records.append(("GuiNodeData", asset_path, payload))
     result = bytearray(struct.pack("<i", len(records)))
     for asset_type, asset_path, payload in records:
         result += _bigfile_record(asset_type, asset_path, payload)
@@ -216,7 +230,7 @@ def test_sor4_pre_filler_first_pass_is_resumable(monkeypatch) -> None:
 
 def test_sor4_bigfile_center_crops_backgrounds_and_moves_button_legend() -> None:
     module = _module()
-    title, main, desktop_legend, mobile_legend = module._BIGFILE_PATCHES
+    title, main, desktop_legend, mobile_legend = module._BIGFILE_PATCHES[:4]
 
     assert title.asset_path == "gui/menus/gui_title_screen"
     assert main.asset_path == "gui/menus/main_menu_background"
@@ -235,6 +249,19 @@ def test_sor4_bigfile_center_crops_backgrounds_and_moves_button_legend() -> None
         assert struct.unpack("<f", legend.replacement[8:12])[0] == 900.0
         assert legend.original[:8] == legend.replacement[:8]
         assert legend.original[12:] == legend.replacement[12:]
+
+    root_patches = [item for item in module._BIGFILE_PATCHES if item.root_transform]
+    assert len(root_patches) == 18
+    assert {item.asset_path for item in root_patches} >= {
+        "gui/menus/gui_title_screen",
+        "gui/menus/gui_menu_character_select",
+        "gui/menus/gui_story",
+        "gui/gui_cutscene_skip",
+        "gui/gui_loading_screen",
+    }
+    for item in root_patches:
+        assert struct.unpack("<f", item.original[8:12])[0] == 1080.0
+        assert struct.unpack("<f", item.replacement[8:12])[0] == 1440.0
 
 
 def test_sor4_bigfile_patch_round_trips_and_preserves_every_other_byte() -> None:
@@ -300,6 +327,19 @@ def test_sor4_bigfile_unrecognized_or_duplicate_target_fails_closed() -> None:
         "GuiNodeData", target.asset_path, b"duplicate" + target.original
     )
     assert module._bigfile_patch_locations(bytes(duplicate))[0] == "unsupported"
+
+    invalid_root = bytearray(_synthetic_bigfile_raw(module, all_original))
+    root_path = next(
+        item.asset_path for item in module._BIGFILE_PATCHES if item.root_transform
+    )
+    root_entry = next(
+        item
+        for item in module._parse_bigfile_raw(bytes(invalid_root))
+        if item.asset_type == "GuiNodeData" and item.asset_path == root_path
+    )
+    assert invalid_root[root_entry.payload_offset] == 0x32
+    invalid_root[root_entry.payload_offset + 1] = 0
+    assert module._bigfile_patch_locations(bytes(invalid_root))[0] == "unsupported"
 
 
 def test_xamarin_xalz_store_replacement_round_trips_without_moving_entries() -> None:

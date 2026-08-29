@@ -25,7 +25,8 @@ assumptions:
 - BlitWorks and Cellar Door Games splash/logo placement
 - title rendering, post-processing, fades, camera, selections, menus,
   copyright text, loading text, and touch-button anchors
-- options-menu entry, exit, list, and return transitions
+- options-menu background centering with its relative slide distances preserved
+- proportional map and teleporter rendering centered in the taller display
 - pause-menu icon layout
 - touch-coordinate conversion through the taller virtual screen
 - an initial virtual-screen metrics refresh, so the 1320x990 dimensions reach

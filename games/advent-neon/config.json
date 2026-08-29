@@ -17,7 +17,10 @@
   "required_entries": [
     "assets/game.droid"
   ],
-  "preferred_entries": [],
+  "preferred_entries": [
+    "assets/splash.png",
+    "assets/portrait_splash.png"
+  ],
   "entry_globs": [],
   "output_name": "Advent-Neon-4x3.apk",
   "features": [
@@ -25,7 +28,9 @@
     "4:3 camera, GUI, pause capture, shader compositor, and video reset paths",
     "expanded splash, cutscene, dialogue, objective, boss-intro, transition, training, stage-stat, and stage-clear UI",
     "always-visible mobile control artwork hidden while input handling is preserved",
-    "Press Any Key title prompt moved lower in the 4:3 frame",
+    "title-scene and controls-guide foregrounds centered in the 4:3 frame",
+    "flash-warning foreground centered independently from its tiled background",
+    "recognized GameMaker runner startup logos replaced by a plain black loading frame",
     "shared optional APKVision branding cleanup"
   ],
   "known_limitations": [

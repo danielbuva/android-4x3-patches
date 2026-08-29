@@ -265,7 +265,14 @@ _SETTINGS_TEXT_SPECS = (
 # build. Scale only the four font sizes used below the two uniquely named
 # settings roots; gameplay HUD and unrelated menus are intentionally untouched.
 _TEXT_FONT_SIZE_OFFSET = 0x64
-_SETTINGS_FONT_SIZES = {11: 15, 12: 16, 14: 19, 15: 20}
+_SETTINGS_FONT_SIZES = {11: 19, 12: 21, 14: 24, 15: 26}
+# Upgrade source for APKs produced by the first public font-scaling pass. The
+# full settings-tree distribution distinguishes it from an untouched source.
+_LEGACY_SETTINGS_FONT_SIZES = {11: 15, 12: 16, 14: 19, 15: 20}
+_LEGACY_TO_CURRENT_FONT_SIZES = {
+    old: _SETTINGS_FONT_SIZES[original]
+    for original, old in _LEGACY_SETTINGS_FONT_SIZES.items()
+}
 
 
 _INTRO_RECTS = (
@@ -642,11 +649,15 @@ def _settings_font_state(raw: bytes) -> tuple[str, int | None]:
     if len(raw) < _TEXT_FONT_SIZE_OFFSET + 4:
         return "unsupported", None
     value = struct.unpack_from("<i", raw, _TEXT_FONT_SIZE_OFFSET)[0]
-    if value in set(_SETTINGS_FONT_SIZES).intersection(_SETTINGS_FONT_SIZES.values()):
+    originals = set(_SETTINGS_FONT_SIZES)
+    patched = set(_SETTINGS_FONT_SIZES.values())
+    legacy = set(_LEGACY_SETTINGS_FONT_SIZES.values())
+    memberships = sum(value in values for values in (originals, patched, legacy))
+    if memberships > 1:
         return "ambiguous", value
-    if value in _SETTINGS_FONT_SIZES:
+    if value in originals or value in legacy:
         return "original", value
-    if value in _SETTINGS_FONT_SIZES.values():
+    if value in patched:
         return "patched", value
     return "unsupported", value
 
@@ -848,23 +859,32 @@ def _discover_unity(bundle: Any) -> tuple[list[dict[str, Any]], list[dict[str, A
             text_readers.append((path, readers[0], raw, value))
 
         values = [item[3] for item in text_readers]
-        recognized = set(_SETTINGS_FONT_SIZES) | set(_SETTINGS_FONT_SIZES.values())
-        definite_original = set(_SETTINGS_FONT_SIZES) - set(_SETTINGS_FONT_SIZES.values())
-        definite_patched = set(_SETTINGS_FONT_SIZES.values()) - set(_SETTINGS_FONT_SIZES)
-        has_original = any(value in definite_original for value in values)
-        has_patched = any(value in definite_patched for value in values)
+        clean_values = set(_SETTINGS_FONT_SIZES)
+        patched_values = set(_SETTINGS_FONT_SIZES.values())
+        legacy_values = set(_LEGACY_SETTINGS_FONT_SIZES.values())
+        recognized = clean_values | patched_values | legacy_values
+        clean_group = bool(values) and all(value in clean_values for value in values)
+        patched_group = bool(values) and all(value in patched_values for value in values)
+        legacy_group = (
+            bool(values)
+            and all(value in legacy_values for value in values)
+            and any(value in {16, 20} for value in values)
+        )
+        source_mapping: dict[int, int] | None = None
         if ambiguous_components:
             state = "ambiguous"
         elif len(text_readers) < 40:
             state = "unsupported"
         elif any(value not in recognized for value in values):
             state = "unsupported"
-        elif has_original and has_patched:
-            state = "ambiguous"
-        elif has_original:
-            state = "original"
-        elif has_patched:
+        elif patched_group:
             state = "patched"
+        elif clean_group:
+            state = "original"
+            source_mapping = _SETTINGS_FONT_SIZES
+        elif legacy_group:
+            state = "original"
+            source_mapping = _LEGACY_TO_CURRENT_FONT_SIZES
         else:
             state = "ambiguous"
         targets.append(
@@ -878,9 +898,11 @@ def _discover_unity(bundle: Any) -> tuple[list[dict[str, Any]], list[dict[str, A
             }
         )
         if state == "original":
+            if source_mapping is None:  # pragma: no cover - internal invariant
+                raise PatchError(f"{spec.name} has no font source mapping")
             for path, reader, raw, value in text_readers:
                 original = struct.pack("<i", value)
-                patched = struct.pack("<i", _SETTINGS_FONT_SIZES[value])
+                patched = struct.pack("<i", source_mapping[value])
                 actions.append(
                     {
                         "kind": "raw",
