@@ -25,7 +25,8 @@ assumptions:
 - BlitWorks and Cellar Door Games splash/logo placement
 - title rendering, post-processing, fades, camera, selections, menus,
   copyright text, loading text, and touch-button anchors
-- options-menu parchment and final option-row positions centered together
+- options-menu parchment and option rows centered and animated together on
+  both entry and exit
 - a 1220×890 map/teleporter render surface, with its camera, room labels, title
   mapping, and bottom legend moved onto the correct coordinate systems; its
   backing render target is the complete 1320×990 screen rather than a

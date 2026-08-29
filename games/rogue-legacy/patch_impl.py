@@ -166,12 +166,21 @@ _REGIONS = (
         _hx("0d1203286701000aa228060000062608"),
         (
             _Change("options exit container center", 0x0, _r4(360), _r4(495)),
-            _Change("options exit slide distance", 0x11D, _r4(-495), _r4(-360)),
+            # The rows are already at their final centered positions. Do not
+            # snap them back to GetOptionStartY immediately before animating.
+            _Change(
+                "preserve centered option rows on exit",
+                0xCB,
+                _hx("080228b70b0006060228b80b00065a586b6ff8150006"),
+                b"\0" * 22,
+            ),
+            # Match the parchment's 495-to-0 exit travel so both layers stay
+            # aligned for the complete animation.
+            _Change("options exit slide distance", 0x11D, _r4(-360), _r4(-495)),
         ),
         (
             (0x48, _hx("00000125167222240070a225")),
             (0x91, _hx("240070a225177256240070a2")),
-            (0xD9, _hx("5a586b6ff815000608220000")),
         ),
     ),
     _Region(

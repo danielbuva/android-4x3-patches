@@ -283,8 +283,11 @@ def test_rogue_legacy_production_targets_are_guarded_and_length_preserving() -> 
     assert changes["options list slide distance"].patched == rogue._r4(360)
     assert changes["options return slide distance"].original == rogue._r4(360)
     assert changes["options return slide distance"].patched == rogue._r4(495)
-    assert changes["options exit slide distance"].original == rogue._r4(-495)
-    assert changes["options exit slide distance"].patched == rogue._r4(-360)
+    assert changes["options exit slide distance"].original == rogue._r4(-360)
+    assert changes["options exit slide distance"].patched == rogue._r4(-495)
+    exit_rows = changes["preserve centered option rows on exit"]
+    assert len(exit_rows.original) == 22
+    assert exit_rows.patched == b"\0" * 22
     for region in rogue._REGIONS:
         assert region.before and region.after
         for change in region.changes:
