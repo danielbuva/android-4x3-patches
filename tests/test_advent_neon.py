@@ -28,6 +28,8 @@ def test_advent_scripts_are_guarded_and_contain_no_complete_game_routines() -> N
 
 
 def test_advent_scripts_cover_camera_gui_and_presentation_postconditions() -> None:
+    patch = (MODULE_DIR / "patch.csx").read_text(encoding="utf-8")
+    original = (MODULE_DIR / "original_verify.csx").read_text(encoding="utf-8")
     verified = (MODULE_DIR / "verify.csx").read_text(encoding="utf-8")
 
     for target in (
@@ -55,6 +57,13 @@ def test_advent_scripts_cover_camera_gui_and_presentation_postconditions() -> No
         ", 0, 960, irandom_range(1, 4), 270,",
     ):
         assert patched_anchor in verified
+
+    assert 'instance.Y == 624' in original
+    assert 'pressAnyKeyInstances[0].Y = 684' in patch
+    assert 'instance.Y == 684' in verified
+    assert 'spr_joybase' in original
+    assert 'ReplaceOnce(mobileDraw, mobileDraw, "exit;"' in patch
+    assert 'RequireCode("gml_Object_obj_mobilecontrols_Draw_64", "exit;")' in verified
 
 
 def test_every_advent_mutation_has_one_named_verifier_postcondition() -> None:

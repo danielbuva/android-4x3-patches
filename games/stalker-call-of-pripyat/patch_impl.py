@@ -103,6 +103,14 @@ class _VkSpec:
     path: str
 
 
+@dataclass(frozen=True)
+class _SettingsTextSpec:
+    name: str
+    serialized: str
+    root: str
+    tested_count: int
+
+
 def _hx(value: str) -> bytes:
     return bytes.fromhex(value)
 
@@ -236,6 +244,28 @@ _VK_SPECS = (
     _VkSpec("main-menu VK promo button", "level0", "Canvas/Glavnaia/Button"),
     _VkSpec("pause-menu VK promo button", "level1", "Player/UI/Pause/Button"),
 )
+
+
+_SETTINGS_TEXT_SPECS = (
+    _SettingsTextSpec(
+        "main-menu settings text scale",
+        "level0",
+        "Canvas/Setting",
+        68,
+    ),
+    _SettingsTextSpec(
+        "pause-menu settings text scale",
+        "level1",
+        "Player/UI/Pause/Setting",
+        70,
+    ),
+)
+
+# Unity UI Text serializes FontData.m_FontSize at 0x64 in this Unity 2021
+# build. Scale only the four font sizes used below the two uniquely named
+# settings roots; gameplay HUD and unrelated menus are intentionally untouched.
+_TEXT_FONT_SIZE_OFFSET = 0x64
+_SETTINGS_FONT_SIZES = {11: 15, 12: 16, 14: 19, 15: 20}
 
 
 _INTRO_RECTS = (
@@ -445,6 +475,9 @@ def _target_paths(serialized_name: str) -> set[str]:
         item.path for item in _CAMERA_SPECS if item.serialized == serialized_name
     )
     result.update(item.path for item in _VK_SPECS if item.serialized == serialized_name)
+    result.update(
+        item.root for item in _SETTINGS_TEXT_SPECS if item.serialized == serialized_name
+    )
     if serialized_name == "level1":
         result.update(path for _name, path in _INTRO_RECTS)
         result.add(_INTRO_VIDEO_PATH)
@@ -475,9 +508,25 @@ def _path_index(serialized: Any, wanted: set[str]) -> dict[str, list[int]]:
         return value
 
     result = {path: [] for path in wanted}
+    settings_roots = tuple(
+        spec.root
+        for spec in _SETTINGS_TEXT_SPECS
+        if spec.serialized == getattr(serialized, "name", "")
+    )
+    # UnityPy's serialized file name is not consistent across versions, so
+    # also derive the applicable roots from the wanted exact paths.
+    if not settings_roots:
+        settings_roots = tuple(
+            spec.root
+            for spec in _SETTINGS_TEXT_SPECS
+            if spec.root in wanted
+        )
     for path_id, reader in transforms.items():
         path = resolve(path_id)
-        if path in result:
+        if path in result or any(
+            path == root or path.startswith(root + "/") for root in settings_roots
+        ):
+            result.setdefault(path, [])
             game_object_id = int(reader.read().m_GameObject.path_id)
             if game_object_id not in result[path]:
                 result[path].append(game_object_id)
@@ -587,6 +636,19 @@ def _canvas_state(raw: bytes, spec: _CanvasSpec) -> str:
     if _near(height, spec.patched_height):
         return "patched"
     return "unsupported"
+
+
+def _settings_font_state(raw: bytes) -> tuple[str, int | None]:
+    if len(raw) < _TEXT_FONT_SIZE_OFFSET + 4:
+        return "unsupported", None
+    value = struct.unpack_from("<i", raw, _TEXT_FONT_SIZE_OFFSET)[0]
+    if value in set(_SETTINGS_FONT_SIZES).intersection(_SETTINGS_FONT_SIZES.values()):
+        return "ambiguous", value
+    if value in _SETTINGS_FONT_SIZES:
+        return "original", value
+    if value in _SETTINGS_FONT_SIZES.values():
+        return "patched", value
+    return "unsupported", value
 
 
 def _option_record(value: str) -> bytes:
@@ -742,6 +804,96 @@ def _discover_unity(bundle: Any) -> tuple[list[dict[str, Any]], list[dict[str, A
                     "name": spec.name,
                 }
             )
+
+    for spec in _SETTINGS_TEXT_SPECS:
+        serialized = bundle.files[spec.serialized]
+        before_count = len(targets)
+        root = _one_game_object(
+            serialized,
+            indexes[spec.serialized],
+            name=spec.name,
+            path=spec.root,
+            targets=targets,
+        )
+        if root is None:
+            continue
+        text_readers: list[tuple[str, Any, bytes, int]] = []
+        ambiguous_components = False
+        for path in sorted(indexes[spec.serialized]):
+            if not (path == spec.root or path.startswith(spec.root + "/")):
+                continue
+            game_object_ids = indexes[spec.serialized][path]
+            if len(game_object_ids) != 1:
+                ambiguous_components = True
+                continue
+            game_object = serialized.objects.get(game_object_ids[0])
+            if game_object is None or game_object.type.name != "GameObject":
+                ambiguous_components = True
+                continue
+            readers = _one_component(
+                serialized,
+                game_object,
+                type_name="MonoBehaviour",
+                script=("Text", "UnityEngine.UI", "UnityEngine.UI.dll"),
+            )
+            if not readers:
+                continue
+            if len(readers) != 1:
+                ambiguous_components = True
+                continue
+            raw = bytes(readers[0].get_raw_data())
+            _item_state, value = _settings_font_state(raw)
+            if value is None:
+                value = -1
+            text_readers.append((path, readers[0], raw, value))
+
+        values = [item[3] for item in text_readers]
+        recognized = set(_SETTINGS_FONT_SIZES) | set(_SETTINGS_FONT_SIZES.values())
+        definite_original = set(_SETTINGS_FONT_SIZES) - set(_SETTINGS_FONT_SIZES.values())
+        definite_patched = set(_SETTINGS_FONT_SIZES.values()) - set(_SETTINGS_FONT_SIZES)
+        has_original = any(value in definite_original for value in values)
+        has_patched = any(value in definite_patched for value in values)
+        if ambiguous_components:
+            state = "ambiguous"
+        elif len(text_readers) < 40:
+            state = "unsupported"
+        elif any(value not in recognized for value in values):
+            state = "unsupported"
+        elif has_original and has_patched:
+            state = "ambiguous"
+        elif has_original:
+            state = "original"
+        elif has_patched:
+            state = "patched"
+        else:
+            state = "ambiguous"
+        targets.append(
+            {
+                "name": spec.name,
+                "state": state,
+                "entry": DATA_ENTRY,
+                "path": spec.root,
+                "text_components": len(text_readers),
+                "tested_text_components": spec.tested_count,
+            }
+        )
+        if state == "original":
+            for path, reader, raw, value in text_readers:
+                original = struct.pack("<i", value)
+                patched = struct.pack("<i", _SETTINGS_FONT_SIZES[value])
+                actions.append(
+                    {
+                        "kind": "raw",
+                        "reader": reader,
+                        "offset": _TEXT_FONT_SIZE_OFFSET,
+                        "original": original,
+                        "patched": patched,
+                        "state": "original",
+                        "name": f"{spec.name}: {path}",
+                    }
+                )
+        if len(targets) == before_count:  # pragma: no cover - internal invariant
+            raise PatchError(f"{spec.name} discovery produced no target")
 
     for spec in _CAMERA_SPECS:
         serialized = bundle.files[spec.serialized]

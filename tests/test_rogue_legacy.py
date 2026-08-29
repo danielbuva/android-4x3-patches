@@ -270,3 +270,18 @@ def test_rogue_legacy_production_targets_are_guarded_and_length_preserving() -> 
         assert len(target.original.encode("utf-16le")) == len(
             target.patched.encode("utf-16le")
         )
+
+
+def test_rogue_legacy_initial_metrics_refresh_is_guarded() -> None:
+    rogue = _module()
+    region = next(
+        item for item in rogue._REGIONS
+        if item.name == "VirtualScreen.UpdateVirtualSize"
+    )
+
+    assert region.span == 1
+    assert len(region.changes) == 1
+    change = region.changes[0]
+    assert change.original == b"\x16"  # ldc.i4.0
+    assert change.patched == b"\x17"   # ldc.i4.1
+    assert region.before and region.after

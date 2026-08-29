@@ -16,6 +16,9 @@ path without stretching or cropping.
 - Prevents the display-menu toggle from enabling the 426x240 path again.
 - Applies the equivalent guarded edit to every supported `libyoyo.so` ABI
   included in the supplied APK.
+- Center-crops the separate landscape Android startup image to 4:3. This
+  corrects that one image's squeezed presentation without stretching it; the
+  game renderer itself continues to use AM2R's uncropped native 320x240 path.
 
 The module does not remove billing, saves, controllers, online services, or
 other unrelated game behavior.
@@ -45,8 +48,9 @@ GameMaker libraries from AM2R 1.5.2. An APK may contain any nonempty subset of
 those ABIs; every `lib/<abi>/libyoyo.so` that is present must be recognized and
 is patched independently.
 
-Because these targets are compiled YYC native code, this is deliberately an
-exact-build patch rather than a loose byte search. Each present library must
+Because the game-rendering targets are compiled YYC native code, that part is
+deliberately an exact-build patch rather than a loose byte search. The startup
+PNG is detected separately from its dimensions. Each present library must
 match all of the following:
 
 - its audited ABI, size, and complete original or patched SHA-256 identity;
@@ -74,10 +78,11 @@ back up any saves you care about first.
 
 Proprietary-free tests cover ABI-subset discovery, original-to-patched
 transformation, already-patched idempotence, ELF mapping validation, exact
-hash/instruction agreement, and refusal of unknown native builds. Development
-outputs have also passed structural patched-state recognition. Complete intro,
-menu, and gameplay inspection on a physical device is still pending, so
-`--allow-experimental` is required.
+hash/instruction agreement, refusal of unknown native builds, and the
+aspect-preserving startup-image crop. Development outputs have also passed
+structural patched-state recognition. Complete intro, menu, and gameplay
+inspection on a physical device is still pending, so `--allow-experimental`
+is required.
 
 - Only the four audited 32-bit ABI implementations from the tested build are
   supported; an ARM64 or otherwise rebuilt GameMaker library is refused.

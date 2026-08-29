@@ -61,6 +61,10 @@ decide whether the semantic 4:3 configuration itself is compatible.
 
 - The result still needs complete visual review of gameplay, menus, and
   cutscenes on a physical 4:3 device.
+- The tested third-party build still displays a startup toast from a
+  launch-critical nativeized activity library. Removing that library prevents
+  startup, and the individual toast call has not been isolated safely, so this
+  source-specific message is currently left intact.
 - Rebuilding the large nested archive requires substantial temporary free
   space and can take longer than most modules.
 - The original developer signature cannot be retained after rebuilding.

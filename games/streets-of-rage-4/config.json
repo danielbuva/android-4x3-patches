@@ -43,6 +43,7 @@
     "1920x1440 default GUI canvas and expanded camera/culling height",
     "mobile top/bottom/side filler artwork suppressed at both presentation draw sites",
     "title artwork and main-menu background center-cropped to fill 4:3 while controls remain width-fit",
+    "Back and Select button legend aligned to the bottom of the 4:3 menu canvas",
     "proportional 4:3 center crop for all intro and stage videos",
     "isolated More Games analytics event suppressed while Firebase services remain initialized"
   ],
@@ -57,7 +58,7 @@
     "notes": [
       "The managed target is intentionally locked to the audited 1.4.5 binary; the complete APK, signer, and source are not compatibility gates.",
       "Recognized mixed display states are completed; the optional analytics-cleanup range is non-gating and unfamiliar bytes there are preserved.",
-      "The bigfile is not whole-file hash gated: exactly one named GuiNodeData record and one exact original/patched context are required for each background target, while all other records are preserved.",
+      "The bigfile is not whole-file hash gated: exactly one named GuiNodeData record and one exact original/patched context are required for each background or button-legend target, while all other records are preserved.",
       "APKVision cleanup remains optional and is handled by the shared framework.",
       "FirebaseApp/provider initialization, Remote Config, billing, cloud saves, Play Games, EOS, More Games, and support components are preserved."
     ]

@@ -22,6 +22,7 @@
   "output_name": "Rogue-Legacy-4x3.apk",
   "features": [
     "expanded-vertical 1320x990 gameplay and touch space",
+    "initial 4:3 metrics refresh before the first playable room",
     "4:3 splash, title, options, and pause layouts",
     "proportional fixed 16:9 title artwork",
     "recognized porter Telegram credit and developer-promo neutralization when present"

@@ -13,10 +13,13 @@ load mapping, and exact instruction bytes.  Unknown native builds fail closed.
 from __future__ import annotations
 
 import hashlib
+import io
 import struct
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from PIL import Image
 
 
 @dataclass(frozen=True)
@@ -155,7 +158,8 @@ _LIBRARIES = (
 # AM2R packages can legitimately contain only the ABI needed by their target
 # device. The CLI discovers every lib/*/libyoyo.so through config globs; probe()
 # then requires a nonempty subset and validates every implementation present.
-REQUIRED_ENTRIES: tuple[str, ...] = ()
+SPLASH_ENTRY = "assets/splash.png"
+REQUIRED_ENTRIES: tuple[str, ...] = (SPLASH_ENTRY,)
 
 
 def _is_yoyo_library_entry(entry: str) -> bool:
@@ -295,6 +299,59 @@ def _probe_library(path: Path, spec: LibrarySpec) -> dict[str, Any]:
         }
 
 
+def _splash_state(data: bytes) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "name": "landscape startup image",
+        "entry": SPLASH_ENTRY,
+    }
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            image.verify()
+        with Image.open(io.BytesIO(data)) as image:
+            width, height = image.size
+            image_format = image.format
+    except Exception as exc:
+        result.update(state="unsupported", reason=f"startup image is not readable: {exc}")
+        return result
+    result.update(width=width, height=height)
+    if image_format != "PNG" or width <= 0 or height <= 0:
+        result.update(state="unsupported", reason="startup image is not a valid PNG")
+    elif width * 3 == height * 4:
+        result["state"] = "patched"
+    elif width * 3 > height * 4:
+        result["state"] = "original"
+    else:
+        result.update(
+            state="unsupported",
+            reason="startup image is portrait or narrower than 4:3",
+        )
+    return result
+
+
+def _crop_splash_to_4x3(data: bytes) -> bytes:
+    before = _splash_state(data)
+    if before["state"] != "original":
+        raise RuntimeError(
+            f"{SPLASH_ENTRY}: expected a landscape startup image, got {before['state']}"
+        )
+    with Image.open(io.BytesIO(data)) as source:
+        source.load()
+        target_width = source.height * 4 // 3
+        if target_width * 3 != source.height * 4:
+            raise RuntimeError(
+                f"{SPLASH_ENTRY}: image height cannot produce an exact integer 4:3 crop"
+            )
+        left = (source.width - target_width) // 2
+        cropped = source.crop((left, 0, left + target_width, source.height))
+        output = io.BytesIO()
+        cropped.save(output, format="PNG", optimize=False)
+    result = output.getvalue()
+    after = _splash_state(result)
+    if after["state"] != "patched":
+        raise RuntimeError(f"{SPLASH_ENTRY}: 4:3 startup-image postcondition failed")
+    return result
+
+
 def _overall(results: list[dict[str, Any]]) -> str:
     states = {result["state"] for result in results}
     if "ambiguous" in states:
@@ -316,6 +373,29 @@ def probe(extracted: dict[str, Path]) -> dict[str, Any]:
         if _is_yoyo_library_entry(entry)
     )
     results: list[dict[str, Any]] = []
+    if SPLASH_ENTRY in REQUIRED_ENTRIES:
+        splash = extracted.get(SPLASH_ENTRY)
+        if splash is None or not Path(splash).is_file():
+            results.append(
+                {
+                    "name": "landscape startup image",
+                    "entry": SPLASH_ENTRY,
+                    "state": "unsupported",
+                    "reason": "required startup image is missing",
+                }
+            )
+        else:
+            try:
+                results.append(_splash_state(Path(splash).read_bytes()))
+            except OSError as exc:
+                results.append(
+                    {
+                        "name": "landscape startup image",
+                        "entry": SPLASH_ENTRY,
+                        "state": "unsupported",
+                        "reason": f"cannot read startup image: {exc}",
+                    }
+                )
     if not present:
         return {
             "state": "unsupported",
@@ -399,8 +479,15 @@ def apply(extracted: dict[str, Path], output_dir: Path) -> dict[str, Path]:
     states = {target["entry"]: target["state"] for target in status["targets"]}
     replacements: dict[str, Path] = {}
     try:
+        if states.get(SPLASH_ENTRY) == "original":
+            destination = _destination(Path(output_dir), SPLASH_ENTRY)
+            destination.write_bytes(
+                _crop_splash_to_4x3(Path(extracted[SPLASH_ENTRY]).read_bytes())
+            )
+            replacements[SPLASH_ENTRY] = destination
+
         for entry, state in states.items():
-            if state != "original":
+            if entry == SPLASH_ENTRY or state != "original":
                 continue
             spec = specs[entry]
             source = Path(extracted[entry])
@@ -408,10 +495,8 @@ def apply(extracted: dict[str, Path], output_dir: Path) -> dict[str, Path]:
             destination.write_bytes(_patch_data(source.read_bytes(), spec))
             replacements[entry] = destination
 
-        combined = {
-            entry: replacements.get(entry, Path(extracted[entry]))
-            for entry in states
-        }
+        combined = dict(extracted)
+        combined.update(replacements)
         verified = probe(combined)
         if verified["state"] != "patched":
             raise RuntimeError(

@@ -12,6 +12,7 @@ using UndertaleModLib.Compiler;
 // PATCH-MUTATION: game-system.gui-size
 // PATCH-MUTATION: game-system.label-y
 // PATCH-MUTATION: mobile.gui-size
+// PATCH-MUTATION: mobile.hide-overlay
 // PATCH-MUTATION: camera-create.view-height
 // PATCH-MUTATION: camera-step.viewport-height
 // PATCH-MUTATION: camera-step.view-height
@@ -102,6 +103,21 @@ Require(Data.GeneralInfo.DefaultWindowWidth == 1280 &&
         "unexpected default runner surface");
 Require(Data.Rooms.Count == 86, "unexpected room count");
 
+// The title prompt is a uniquely identified room instance rather than a code
+// literal. Keep its horizontal anchor and move it 60 logical pixels downward.
+var controlsRoom = Data.Rooms.ByName("controls");
+Require(controlsRoom != null, "missing controls title room");
+var pressAnyKeyInstances = controlsRoom.GameObjects.Where(instance =>
+    instance.InstanceID == 100013 &&
+    instance.ObjectDefinition != null &&
+    instance.ObjectDefinition.Name.Content == "oText" &&
+    instance.CreationCode != null &&
+    instance.CreationCode.Name.Content == "gml_RoomCC_controls_0_Create" &&
+    instance.X == 640 && instance.Y == 624).ToList();
+Require(pressAnyKeyInstances.Count == 1,
+        "press-any-key title instance is missing or ambiguous");
+pressAnyKeyInstances[0].Y = 684;
+
 Data.GeneralInfo.DefaultWindowHeight = 960;
 
 // Preserve the center of every enabled 1280x720 view while expanding its
@@ -145,6 +161,16 @@ string mobile = GetDecompiledText(mobileName);
 mobile = ReplaceOnce(mobile, "display_set_gui_size(1280, 720);",
     "display_set_gui_size(1280, 960);", mobileName + " GUI size");
 imports.QueueReplace(mobileName, mobile);
+
+string mobileDrawName = "gml_Object_obj_mobilecontrols_Draw_64";
+string mobileDraw = GetDecompiledText(mobileDrawName);
+Require(Occurrences(mobileDraw, "draw_sprite_ext(spr_z_button") == 1,
+        mobileDrawName + " missing Z-button overlay anchor");
+Require(Occurrences(mobileDraw, "draw_sprite_ext(spr_joybase") == 1,
+        mobileDrawName + " missing stick overlay anchor");
+mobileDraw = ReplaceOnce(mobileDraw, mobileDraw, "exit;",
+    mobileDrawName + " hide touch-control overlay");
+imports.QueueReplace(mobileDrawName, mobileDraw);
 
 string cameraCreateName = "gml_Object_oCamera_Create_0";
 string cameraCreate = GetDecompiledText(cameraCreateName);

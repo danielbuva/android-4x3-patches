@@ -35,6 +35,18 @@ Require(Data.GeneralInfo.DefaultWindowWidth == 1280 &&
         "unexpected default runner surface");
 Require(Data.Rooms.Count == 86, "unexpected room count");
 
+var controlsRoom = Data.Rooms.ByName("controls");
+Require(controlsRoom != null, "missing controls title room");
+var pressAnyKeyInstances = controlsRoom.GameObjects.Where(instance =>
+    instance.InstanceID == 100013 &&
+    instance.ObjectDefinition != null &&
+    instance.ObjectDefinition.Name.Content == "oText" &&
+    instance.CreationCode != null &&
+    instance.CreationCode.Name.Content == "gml_RoomCC_controls_0_Create" &&
+    instance.X == 640 && instance.Y == 624).ToList();
+Require(pressAnyKeyInstances.Count == 1,
+        "press-any-key original title instance changed");
+
 int enabledViews = 0;
 foreach (var room in Data.Rooms)
 {
@@ -66,6 +78,10 @@ RequireCode("gml_Object_game_system_Create_0", "display_set_gui_size(1280, 720);
 RequireCode("gml_Object_game_system_Create_0", "y = 688;");
 RequireCode("gml_Object_obj_mobilecontrols_Create_0",
             "display_set_gui_size(1280, 720);");
+RequireCode("gml_Object_obj_mobilecontrols_Draw_64",
+            "draw_sprite_ext(spr_z_button");
+RequireCode("gml_Object_obj_mobilecontrols_Draw_64",
+            "draw_sprite_ext(spr_joybase");
 RequireCode("gml_Object_oCamera_Create_0", "viewHeight = 720;");
 RequireCode("gml_Object_oCamera_Step_0",
             "room_set_viewport(room, 0, true, 0, 0, 1280, 720);");

@@ -13,8 +13,8 @@ Reproducible, target-verified patches that adapt selected Android game ports to 
 
 | Game | Android package | 4:3 result | UI changes | Personally tested build | Compatibility |
 |---|---|---|---|---|---|
-| Advent Neon | `com.CryoGX.adventneonunofficialandroidportbyplayer1444` | **Experimental:** centered 1280×960 cameras with added vertical view | Splash, cutscene, dialogue, menu, and stage UI first pass | 1.0.0 (1000000) | Target-detected; visual iteration pending; UndertaleModTool required |
-| AM2R | `com.lojical.AM2R` | **Experimental:** restores the native 320×240 output instead of 426×240 widescreen | Intro, menu, and gameplay use the same true 4:3 path | 1.5.2 (1005012) | Exact per-ABI native detection; visual confirmation pending; requires `--allow-experimental` |
+| Advent Neon | `com.CryoGX.adventneonunofficialandroidportbyplayer1444` | **Experimental:** centered 1280×960 cameras with added vertical view | Presentation UI expanded, touch overlay hidden, title prompt lowered | 1.0.0 (1000000) | Target-detected; visual iteration pending; UndertaleModTool required |
+| AM2R | `com.lojical.AM2R` | **Experimental:** restores the native 320×240 output instead of 426×240 widescreen | Native 4:3 game path plus proportional startup-image crop | 1.5.2 (1005012) | Exact per-ABI native detection; visual confirmation pending; requires `--allow-experimental` |
 | Blasphemous | `com.thegamekitchen.blasphemousmobile` | Expanded 640×480 compositor and camera | Canvas and achievement popup placement | 1.9.0 (38) | Target-detected |
 | Children of Morta | `com.playdigious.childrenofmorta` | **Experimental:** 4:3 gameplay camera and proportional Android splash crop | Menu, HUD, loading, and in-engine splash references | 1.1.4 (41) | Exact arm64 and semantic Unity target detection; visual pending |
 | Death Road to Canada | `com.noodlecake.drtc` | **Experimental:** 480×360 logical view for intro, menus, and gameplay | Camera, menu, and touch mapping share the taller frame | 1.8.2 (57) | Exact per-ABI native and semantic DEX detection; visual pending |
@@ -25,12 +25,12 @@ Reproducible, target-verified patches that adapt selected Android game ports to 
 | Hollow Knight: Silksong | `com.game.silksong` | Camera minimum lowered to 4:3 | Adaptive menu/loading placement | 1.2.0 (8) | Target-detected |
 | Hotline Miami | `com.devolverdigital.hotlinemiami` | True 4:3 rooms and cameras | Mobile UI and full-height lighting surfaces | 1.0.180 (1000180) | Target-detected; UndertaleModTool required |
 | Huntdown | `com.coffeestain.huntdown` | **Experimental:** native 320×240 view on a 640×480 surface | Proportional intro-video crop; optional source cleanup | 0.1 (200040) | Guarded arm64 rendering targets; visual pending |
-| Rogue Legacy | `com.roguelegacy.port` | **Experimental:** expanded 1320×990 gameplay and touch space | 4:3 splash, title, options, pause, and fade layouts | 1.4.1-r2 (1) | Semantic managed-code target detection; visual pending |
+| Rogue Legacy | `com.roguelegacy.port` | **Experimental:** expanded 1320×990 gameplay and touch space | Initial metrics refresh plus 4:3 splash, title, options, pause, and fade layouts | 1.4.1-r2 (1) | Semantic managed-code target detection; visual pending |
 | Sea of Stars | `com.playdigious.seaofstars` | 640×480 renderer with added vertical world view | Edge-to-edge 4:3 UI | 3.0.60158 (60158) | Target-detected |
 | Shin Chan: Shiro & Coal Town | `com.crunchyroll.gv.shinchanshiroandcoal.game` | 4:3 gameplay, title, and menu | Opening movie uses proportional center crop | 1.0.2 (11) | Target-detected |
 | Skul: The Hero Slayer | `com.playdigious.skul` | 640×480 gameplay | 1920×1440 UI/HUD reference | 1.0.13 (66) | Target-detected |
-| STALKER: Call of Pripyat Mobile | `com.Death13.S.T.A.L.K.E.R.CallofPripyat` | **Experimental:** 4:3 render tiers and Vert+ cameras preserving the original 2:1 horizontal view | Main, pause, author UI, and resolution labels | 0.3 (1) | Exact per-ABI native and semantic Unity target detection; visual pending |
-| Streets of Rage 4 | `com.playdigious.sor4` | Vert+ gameplay with the original horizontal view | 1920×1440 HUD, mobile filler removal, centered title/menu backgrounds, and proportional videos | 1.4.5 (91) | Exact managed + named-GUI detection; gameplay, title, and menu device-verified at 1280×960 |
+| STALKER: Call of Pripyat Mobile | `com.Death13.S.T.A.L.K.E.R.CallofPripyat` | **Experimental:** 4:3 render tiers and Vert+ cameras preserving the original 2:1 horizontal view | Main, pause, author UI, resolution labels, and enlarged settings text | 0.3 (1) | Exact per-ABI native and semantic Unity target detection; visual pending |
+| Streets of Rage 4 | `com.playdigious.sor4` | Vert+ gameplay with the original horizontal view | 1920×1440 HUD, filler removal, centered title/menu backgrounds, bottom-aligned button legend, proportional videos | 1.4.5 (91) | Exact managed + named-GUI detection; gameplay, title, and menu device-verified at 1280×960 |
 | Vampire Survivors | `com.poncle.vampiresurvivors` | Removes the translucent aspect mask | Responsive UI uses real top/bottom edges | 1.15.115 (64958511) | Target-detected |
 | Baba Is You | `org.hempuli.baba` | **Experimental:** incomplete 4:3 attempt | Known right-edge shift/crop remains | 617.0 (617) | Requires `--allow-experimental` |
 

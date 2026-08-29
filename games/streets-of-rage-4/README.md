@@ -20,8 +20,10 @@ This module converts the game's complete Android presentation path to 4:3:
   artwork can no longer cover the game or menus.
 - Two non-interactive backgrounds are found by their named records inside
   `assets/bigfile`: the title screen and main-menu background. Each is scaled
-  proportionally and center-cropped to fill 4:3. The interactive menu canvas,
-  controls, and touch targets remain width-fit and fully visible.
+  proportionally and center-cropped to fill 4:3.
+- The shared desktop/mobile **Back** and **Select** button legend is moved from
+  the old widescreen bottom to the bottom of the 1920x1440 menu canvas. Other
+  controls and touch targets retain their existing layout.
 - All 17 bundled intro, logo, boss, and stage videos are proportionally
   center-cropped from 1280 x 720 to 960 x 720. Their audio streams, frame rate,
   frame count, and duration are retained and checked after encoding.
@@ -56,9 +58,9 @@ optional analytics-cleanup range are preserved.
 
 The menu patch does not require a whole-`bigfile` hash. It strictly parses the
 raw-DEFLATE archive, requires exactly one named GUI record and one exact
-original-or-patched transform context for each of the two backgrounds, and
-preserves all other records. A missing, duplicated, or ambiguous required
-record is rejected without guessing.
+original-or-patched transform context for each background and button-legend
+target, and preserves all other records. A missing, duplicated, or ambiguous
+required record is rejected without guessing.
 
 Each of the 17 required videos must be recognized as either an original H.264
 1280 x 720 stream or an already-patched H.264 960 x 720 stream with square
@@ -77,6 +79,10 @@ screen, and the main menu were visually verified to fill the display at 4:3.
 Gameplay retains its original horizontal view and exposes the intended extra
 vertical area; the former mobile border artwork no longer covers the rendered
 scene.
+
+The later **Back**/**Select** button-legend refinement passed target detection,
+rebuilding, patched-state verification, in-place installation, and cold
+launch. Its exact bottom placement still awaits a follow-up visual check.
 
 ## Known limitations
 

@@ -10,7 +10,9 @@
   "status": "experimental",
   "experimental": true,
   "output_name": "AM2R-v1-5-2-4x3.apk",
-  "required_entries": [],
+  "required_entries": [
+    "assets/splash.png"
+  ],
   "preferred_entries": [
     "lib/*/libyoyo.so"
   ],
@@ -22,11 +24,12 @@
   ],
   "features": [
     "restore the native 320x240 4:3 output for intros, menus, and gameplay",
+    "center-crop the landscape startup image to 4:3 so it is no longer squeezed",
     "disable the compiled 426x240 widescreen path without stretching",
     "lock the display-menu widescreen option off across all bundled ABIs"
   ],
   "compatibility": {
-    "strategy": "package identity, a nonempty subset of audited libyoyo.so ABIs, exact per-library hashes, ELF architecture and load mapping, guarded native instructions, and patched postconditions",
+    "strategy": "package identity, a structurally valid landscape startup PNG, a nonempty subset of audited libyoyo.so ABIs, exact per-library hashes, ELF architecture and load mapping, guarded native instructions, and patched postconditions",
     "version_is_advisory": true,
     "whole_apk_hash_required": false,
     "exact_native_build_required": true,

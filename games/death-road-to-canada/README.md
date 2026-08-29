@@ -80,6 +80,10 @@ if you accept that testing status.
 
 - Other CPU architectures and changed `libmain.so` revisions are not yet
   supported.
+- A report of unintended movement from one Retroid controller could not be
+  reproduced with the controller at rest. The module does not alter SDL's
+  controller mapping or deadzone behavior; a reproducible input trace is
+  needed before changing that path safely.
 - The audited DEX cleanup and splash are required targets for this module;
   builds that substantially change either entry need a new compatibility
   profile.

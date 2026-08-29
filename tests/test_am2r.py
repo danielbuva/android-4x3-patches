@@ -8,6 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from android4x3.registry import Registry
 
@@ -18,6 +19,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 def _module():
     registry = Registry(REPO_ROOT / "games")
     return registry.module(registry.by_id["am2r"])
+
+
+def _splash(path: Path, size: tuple[int, int] = (1704, 960)) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", size, (12, 34, 56)).save(path, format="PNG")
+    return path
 
 
 def _synthetic_elf(module, *, load_virtual_address: int = 0):
@@ -100,7 +107,7 @@ def test_am2r_production_metadata_guards_every_bundled_abi() -> None:
         "mips",
         "x86",
     )
-    assert am2r.REQUIRED_ENTRIES == ()
+    assert am2r.REQUIRED_ENTRIES == (am2r.SPLASH_ENTRY,)
     for spec in am2r._LIBRARIES:
         assert len(spec.original_sha256) == 64
         assert len(spec.patched_sha256) == 64
@@ -154,15 +161,36 @@ def test_am2r_accepts_and_patches_one_present_audited_abi(
     source = tmp_path / present.entry
     source.parent.mkdir(parents=True)
     source.write_bytes(original)
-    extracted = {present.entry: source}
+    extracted = {
+        present.entry: source,
+        am2r.SPLASH_ENTRY: _splash(tmp_path / am2r.SPLASH_ENTRY),
+    }
 
     result = am2r.probe(extracted)
     assert result["state"] == "original"
-    assert [target["entry"] for target in result["targets"]] == [present.entry]
+    assert {target["entry"] for target in result["targets"]} == {
+        present.entry,
+        am2r.SPLASH_ENTRY,
+    }
     replacements = am2r.apply(extracted, tmp_path / "patched-subset")
-    assert set(replacements) == {present.entry}
+    assert set(replacements) == {present.entry, am2r.SPLASH_ENTRY}
     assert replacements[present.entry].read_bytes() == patched
     assert am2r.probe(replacements)["state"] == "patched"
+
+
+def test_am2r_startup_image_is_center_cropped_without_squishing(tmp_path: Path) -> None:
+    am2r = _module()
+    source = _splash(tmp_path / "wide.png")
+    original = source.read_bytes()
+
+    assert am2r._splash_state(original)["state"] == "original"
+    patched = am2r._crop_splash_to_4x3(original)
+    assert am2r._splash_state(patched)["state"] == "patched"
+    output = tmp_path / "cropped.png"
+    output.write_bytes(patched)
+    with Image.open(output) as image:
+        assert image.size == (1280, 960)
+        assert image.getpixel((0, 0)) == (12, 34, 56)
 
 
 def test_am2r_rejects_present_unrecognized_abi(

@@ -85,6 +85,27 @@ _REGIONS = (
         _hx("02280a1800066f7101000a73460d0006"),
         (_Change("virtual-screen height", 0, _i4(720), _i4(990)),),
     ),
+    # The port normally refreshes EngineEV.ScreenHeight, camera metrics, input
+    # conversion, effects, and render targets only when UpdateVirtualSize()
+    # reports that it changed the dimensions.  Our constructor patch starts at
+    # 1320x990 already, so the first refresh used to return false and leave the
+    # old 720-pixel metrics active until a later screen transition.  Return true
+    # for that one dirty no-size-change path so the initial screen, touch input,
+    # overlays, and menus all receive the 990-pixel metrics immediately.
+    _Region(
+        "VirtualScreen.UpdateVirtualSize",
+        _hx("060228540d0006330b070228560d00063302"),
+        0x1,
+        _hx("2a020628550d0006"),
+        (
+            _Change(
+                "refresh metrics when the requested size is already active",
+                0,
+                b"\x16",  # ldc.i4.0
+                b"\x17",  # ldc.i4.1
+            ),
+        ),
+    ),
     _Region(
         "BlitWorksSplashScreen.LoadContent",
         _hx("7d7b120004027b7b1200042200002544"),

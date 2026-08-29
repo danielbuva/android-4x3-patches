@@ -1,10 +1,12 @@
 using System;
+using System.Linq;
 
 // One verification ID for every patch.csx mutation. Tests require exact parity.
 // VERIFIED-MUTATION: game-system.true-res
 // VERIFIED-MUTATION: game-system.gui-size
 // VERIFIED-MUTATION: game-system.label-y
 // VERIFIED-MUTATION: mobile.gui-size
+// VERIFIED-MUTATION: mobile.hide-overlay
 // VERIFIED-MUTATION: camera-create.view-height
 // VERIFIED-MUTATION: camera-step.viewport-height
 // VERIFIED-MUTATION: camera-step.view-height
@@ -90,6 +92,18 @@ Require(Data.GeneralInfo.DefaultWindowWidth == 1280 &&
         Data.GeneralInfo.DefaultWindowHeight == 960,
         "4:3 default runner surface missing");
 
+var controlsRoom = Data.Rooms.ByName("controls");
+Require(controlsRoom != null, "missing controls title room");
+var pressAnyKeyInstances = controlsRoom.GameObjects.Where(instance =>
+    instance.InstanceID == 100013 &&
+    instance.ObjectDefinition != null &&
+    instance.ObjectDefinition.Name.Content == "oText" &&
+    instance.CreationCode != null &&
+    instance.CreationCode.Name.Content == "gml_RoomCC_controls_0_Create" &&
+    instance.X == 640 && instance.Y == 684).ToList();
+Require(pressAnyKeyInstances.Count == 1,
+        "press-any-key 4:3 title placement changed");
+
 int enabledViews = 0;
 foreach (var room in Data.Rooms)
 {
@@ -113,6 +127,10 @@ RequireCode("gml_Object_game_system_Create_0", "display_set_gui_size(1280, 960);
 RequireCode("gml_Object_game_system_Create_0", "y = 928;");
 RequireCode("gml_Object_obj_mobilecontrols_Create_0",
             "display_set_gui_size(1280, 960);");
+RequireCode("gml_Object_obj_mobilecontrols_Draw_64", "exit;");
+Require(Occurrences(GetDecompiledText("gml_Object_obj_mobilecontrols_Draw_64"),
+                    "draw_sprite_ext(") == 0,
+        "touch-control overlay draw calls remain");
 RequireCode("gml_Object_oCamera_Create_0", "viewHeight = 960;");
 RequireCode("gml_Object_oCamera_Step_0",
             "room_set_viewport(room, 0, true, 0, 0, 1280, 960);");

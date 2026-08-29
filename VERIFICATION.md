@@ -23,9 +23,11 @@ stored in this record.
 | Game group | Repository state | Verification evidence |
 |---|---|---|
 | Blasphemous, FAITH, Hollow Knight, Hollow Knight: Silksong, Hotline Miami, Sea of Stars, Shin Chan, Skul, Vampire Survivors | Verified | Proprietary-free tests, archived patched-state recognition, and physical-device visual checks performed during development |
-| Streets of Rage 4 | Verified | Clean-to-patched public-command reproduction; all managed, named-bigfile, and 17 video targets reached patched state; signed archive verification passed; title, main menu, filler removal, and gameplay verified at 1280x960 |
+| Streets of Rage 4 | Verified | Clean-to-patched public-command reproduction; all managed, named-bigfile, and 17 video targets reached patched state; signed archive verification passed; title, main menu, filler removal, and gameplay verified at 1280x960. The later button-legend anchor refinement passed archived-state completion, installation, and cold launch; its exact placement awaits visual confirmation. |
 | Baba Is You | Experimental | Structural and archived post-state checks pass, but the known right-edge shift/crop remains visible |
-| Advent Neon, AM2R, Children of Morta, Death Road to Canada, Dusklight, Grimvalor, Huntdown, Rogue Legacy, STALKER: Call of Pripyat Mobile | Experimental | Proprietary-free target tests and development-output checks pass; complete room/menu/gameplay visual inspection remains pending |
+| Advent Neon, AM2R | Experimental | Clean-to-patched reproduction of the current follow-up targets, signed post-state recognition, in-place installation, and cold launch passed; complete visual inspection remains pending |
+| Rogue Legacy, STALKER: Call of Pripyat Mobile | Experimental | Archived patched-state inputs were safely completed with the current follow-up targets; signed post-state recognition, in-place installation, and cold launch passed; complete visual inspection remains pending |
+| Children of Morta, Death Road to Canada, Dusklight, Grimvalor, Huntdown | Experimental | Proprietary-free target tests and development-output checks pass; complete room/menu/gameplay visual inspection remains pending |
 
 The supported-games table in [README.md](README.md#supported-patches) is the
 authoritative status list. Experimental modules require

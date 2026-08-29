@@ -19,6 +19,10 @@ simulate 4:3.
 - Expands the splash, cutscene, dialogue, objective, boss-introduction,
   transition, training, stage-stat, and stage-clear layouts.
 - Moves mobile controls and presentation effects into the 4:3 GUI area.
+- Hides the port's always-visible drawn touch-control overlay without removing
+  controller or touch-input handling.
+- Moves the **Press Any Key** title prompt 60 pixels lower in the 960-pixel
+  frame.
 
 Optional third-party-source branding cleanup is handled by the shared
 framework. Branding is not required for compatibility, and an official or
@@ -60,8 +64,8 @@ entry, the module asks UndertaleModTool to require:
 
 The patch is accepted only when all required targets form one coherent
 original or already-patched state. Missing, changed, duplicated, or ambiguous
-targets are refused instead of being patched by guesswork. Every one of the 55
-scripted mutations has a matching named postcondition, and the rebuilt
+targets are refused instead of being patched by guesswork. Every scripted
+mutation has a matching named postcondition, and the rebuilt
 GameMaker archive is reopened and checked before APK output continues.
 
 ## Signing
@@ -84,5 +88,5 @@ still pending, so `--allow-experimental` is required.
   individual rooms.
 - Particles, cinematics, or encounter framing may need game-specific follow-up
   after visual testing.
-- Saved touch-control coordinates created for the old 1280x720 GUI may remain
-  until the player resets or repositions them.
+- The visual touch-control overlay is intentionally hidden. This does not add
+  new controller mappings or redesign touch-input regions.

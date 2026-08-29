@@ -24,12 +24,14 @@
     "centered 1280x960 views and ports with 120 extra world pixels above and below",
     "4:3 camera, GUI, pause capture, shader compositor, and video reset paths",
     "expanded splash, cutscene, dialogue, objective, boss-intro, transition, training, stage-stat, and stage-clear UI",
+    "always-visible mobile control artwork hidden while input handling is preserved",
+    "Press Any Key title prompt moved lower in the 4:3 frame",
     "shared optional APKVision branding cleanup"
   ],
   "known_limitations": [
     "The result is structurally verified but has not yet been visually verified on a device.",
     "Previously unauthored vertical world/background space, particles, cinematics, or encounter framing may need follow-up adjustments.",
-    "Saved mobile-control positions may retain coordinates chosen for the old 1280x720 GUI until reset by the player."
+    "The visual mobile-control overlay is intentionally hidden; this does not add new controller mappings."
   ],
   "compatibility": {
     "strategy": "named GameMaker project/resource checks plus guarded semantic source fragments and patched postconditions",

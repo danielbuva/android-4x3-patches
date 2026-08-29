@@ -179,12 +179,16 @@ def _bigfile_change(
 
 # The mobile title and main-menu screens are composed from protobuf-net GUI
 # roots stored in a raw-DEFLATE bigfile. Their Android render surface is already
-# full-screen, but these two background nodes retain a 1920x1080 transform and
+# full-screen, but two background nodes retain a 1920x1080 transform and
 # therefore cover only the upper 720 pixels of a 1280x960 display. Scale only
 # the non-interactive backgrounds by 4/3 and move them left by 320 logical
 # pixels. The 1920x1080 art becomes 2560x1440 and is center-cropped to the
-# 1920x1440 canvas. Menu UI and touch targets keep the existing width-fit
-# transform and remain fully visible.
+# 1920x1440 canvas.
+#
+# The Back/Select legend is shared by desktop and mobile main-menu subtrees.
+# Its parent remained at y=540 on the new 1440-high canvas, leaving the legend
+# at the old widescreen bottom. Move that parent to y=900 while retaining the
+# child layout and touch targets.
 _BIGFILE_PATCHES = (
     _bigfile_change(
         "title-screen-background-center-crop",
@@ -225,6 +229,46 @@ _BIGFILE_PATCHES = (
         2a 0c 08 ff 01 10 ff 01 18 ff 01 20 ff 01
         4a 19 aa 01 16 0a 14 0d 00 00 00 00 15 00 00 00 00
         1d 00 00 96 46 25 00 00 87 44
+        52 0a 0d 00 00 00 00 15 00 00 00 00 58 00
+        """,
+    ),
+    _bigfile_change(
+        "main-menu-button-legend-bottom",
+        "gui/menus/gui_main_sub",
+        """
+        0a 0a 0d 00 00 70 44 15 00 00 07 44
+        12 08 63 6f 6e 74 72 6f 6c 73
+        1d 00 00 80 3f
+        2a 0c 08 ff 01 10 ff 01 18 ff 01 20 ff 01
+        4a 0a ea 01 07 10 5e 10 c1 01 18 01
+        52 0a 0d 00 00 00 00 15 00 00 00 00 58 00
+        """,
+        """
+        0a 0a 0d 00 00 70 44 15 00 00 61 44
+        12 08 63 6f 6e 74 72 6f 6c 73
+        1d 00 00 80 3f
+        2a 0c 08 ff 01 10 ff 01 18 ff 01 20 ff 01
+        4a 0a ea 01 07 10 5e 10 c1 01 18 01
+        52 0a 0d 00 00 00 00 15 00 00 00 00 58 00
+        """,
+    ),
+    _bigfile_change(
+        "mobile-main-menu-button-legend-bottom",
+        "gui/menus/mobile/gui_main_sub",
+        """
+        0a 0a 0d 00 00 70 44 15 00 00 07 44
+        12 08 63 6f 6e 74 72 6f 6c 73
+        1d 00 00 80 3f
+        2a 0c 08 ff 01 10 ff 01 18 ff 01 20 ff 01
+        4a 0a ea 01 07 10 5e 10 c1 01 18 01
+        52 0a 0d 00 00 00 00 15 00 00 00 00 58 00
+        """,
+        """
+        0a 0a 0d 00 00 70 44 15 00 00 61 44
+        12 08 63 6f 6e 74 72 6f 6c 73
+        1d 00 00 80 3f
+        2a 0c 08 ff 01 10 ff 01 18 ff 01 20 ff 01
+        4a 0a ea 01 07 10 5e 10 c1 01 18 01
         52 0a 0d 00 00 00 00 15 00 00 00 00 58 00
         """,
     ),

@@ -34,6 +34,8 @@ The Unity UI is updated alongside those render changes:
 - the main-menu reference canvas becomes 1280×960
 - the author/credits and gameplay/pause reference canvases become 1920×1440
 - main-menu and pause-menu resolution labels show the new 4:3 choices
+- settings text in both the main and pause menus is enlarged proportionally
+  from the port's unusually small audited font sizes
 - a recognized VK promotion button is hidden in the main and pause menus when
   its exact object, component, and listener are safely identified
 
@@ -89,10 +91,11 @@ states. The patcher updates every audited ABI that is present. A package with
 one supported audited ABI is acceptable; a present but unrecognized audited
 ABI causes a safe refusal.
 
-Unity camera, CanvasScaler, and resolution-dropdown targets must likewise be
-unique and contain recognized original or patched values. Mixed-state and
-already-patched APKs can be completed or accepted. Missing, duplicated, or
-unknown required targets stop the patch without guessed offsets.
+Unity camera, CanvasScaler, resolution-dropdown, and settings-text targets
+must likewise be unique and contain recognized original or patched values.
+Mixed-state and already-patched APKs can be completed or accepted. Missing,
+duplicated, or unknown required targets stop the patch without guessed
+offsets.
 
 ## Signing and installation
 
@@ -124,3 +127,9 @@ Intro-related objects in the tested data are inspected only as optional,
 non-gating presentation invariants; this module does not rewrite an unfamiliar
 intro implementation. The currently audited native patches cover ARM64 and
 ARMv7 only.
+
+The tested port's global Unity input configuration already contains common
+gamepad axes and buttons, but gameplay actions other than movement are read by
+port-specific touch scripts. This revision does not redirect those actions to
+a controller because no complete, unambiguous action mapping was available to
+verify safely.

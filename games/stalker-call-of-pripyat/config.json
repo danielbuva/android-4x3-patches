@@ -27,6 +27,7 @@
     "expanded-vertical perspective gameplay and menu cameras",
     "4:3 main, pause, and author UI reference canvases",
     "matching resolution labels",
+    "larger main-menu and pause-menu settings text",
     "optional guarded VK promo-button hiding"
   ],
   "compatibility": {
@@ -37,6 +38,7 @@
       "Unity objects are selected by full hierarchy path, component type, and MonoScript identity rather than PathID.",
       "At least one audited ABI must be present; every present audited ABI must expose one guarded three-tier GameSettings.DropVideoQuality instruction region.",
       "Core compatibility excludes optional source-specific VK cleanup and informational intro invariants.",
+      "Controller action remapping is not included; the audited port routes non-movement actions through separate touch scripts.",
       "The shared optional branding cleanup remains responsible for recognized APKVision runtime wrappers; this source has none."
     ]
   }

@@ -135,6 +135,27 @@ def test_stalker_canvas_scaler_guards_original_patched_and_unknown() -> None:
     assert stalker._canvas_state(raw, spec) == "unsupported"
 
 
+def test_stalker_settings_font_sizes_are_scaled_and_idempotently_classified() -> None:
+    stalker = _module()
+    raw = bytearray(stalker._TEXT_FONT_SIZE_OFFSET + 4)
+
+    expected = {11: 15, 12: 16, 14: 19, 15: 20}
+    assert stalker._SETTINGS_FONT_SIZES == expected
+    for original, patched in expected.items():
+        struct.pack_into("<i", raw, stalker._TEXT_FONT_SIZE_OFFSET, original)
+        state, value = stalker._settings_font_state(raw)
+        assert value == original
+        assert state == ("ambiguous" if original == 15 else "original")
+
+        struct.pack_into("<i", raw, stalker._TEXT_FONT_SIZE_OFFSET, patched)
+        state, value = stalker._settings_font_state(raw)
+        assert value == patched
+        assert state == ("ambiguous" if patched == 15 else "patched")
+
+    struct.pack_into("<i", raw, stalker._TEXT_FONT_SIZE_OFFSET, 99)
+    assert stalker._settings_font_state(raw) == ("unsupported", 99)
+
+
 def test_stalker_dropdown_labels_are_length_preserving_and_idempotent() -> None:
     stalker = _module()
     spec = stalker._DROPDOWN_SPECS[1]
@@ -306,6 +327,7 @@ def test_stalker_production_specs_cover_both_abis_and_all_three_tiers() -> None:
             assert change.original != change.patched
     assert len(stalker._CAMERA_SPECS) == 3
     assert len(stalker._CANVAS_SPECS) == 3
+    assert tuple(spec.tested_count for spec in stalker._SETTINGS_TEXT_SPECS) == (68, 70)
     assert len(stalker._VK_SPECS) == 2
 
 

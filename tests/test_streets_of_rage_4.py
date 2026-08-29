@@ -87,7 +87,8 @@ def _bigfile_record(asset_type: str, asset_path: str, payload: bytes) -> bytes:
     )
 
 
-def _synthetic_bigfile_raw(module, states: tuple[str, str]) -> bytes:
+def _synthetic_bigfile_raw(module, states: tuple[str, ...]) -> bytes:
+    assert len(states) == len(module._BIGFILE_PATCHES)
     records = [("OtherData", "unrelated/asset", b"preserve-me")]
     for patch, state in zip(module._BIGFILE_PATCHES, states):
         target = patch.original if state == "original" else patch.replacement
@@ -213,9 +214,9 @@ def test_sor4_pre_filler_first_pass_is_resumable(monkeypatch) -> None:
     assert module._patch_layout_state(completed) == "patched"
 
 
-def test_sor4_bigfile_center_crops_only_two_noninteractive_backgrounds() -> None:
+def test_sor4_bigfile_center_crops_backgrounds_and_moves_button_legend() -> None:
     module = _module()
-    title, main = module._BIGFILE_PATCHES
+    title, main, desktop_legend, mobile_legend = module._BIGFILE_PATCHES
 
     assert title.asset_path == "gui/menus/gui_title_screen"
     assert main.asset_path == "gui/menus/main_menu_background"
@@ -227,17 +228,20 @@ def test_sor4_bigfile_center_crops_only_two_noninteractive_backgrounds() -> None
     assert struct.unpack("<f", main.replacement[3:7])[0] == -320.0
     assert struct.unpack("<f", main.original[13:17])[0] == 1.0
     assert struct.unpack("<f", main.replacement[13:17])[0] == pytest.approx(4 / 3)
-    # The mobile main-menu UI root is intentionally not a patch target, so its
-    # controls and touch targets remain on the uncropped width-fit canvas.
-    assert all(
-        "mobile/gui_main_menu_screen" not in item.asset_path
-        for item in (title, main)
-    )
+    assert desktop_legend.asset_path == "gui/menus/gui_main_sub"
+    assert mobile_legend.asset_path == "gui/menus/mobile/gui_main_sub"
+    for legend in (desktop_legend, mobile_legend):
+        assert struct.unpack("<f", legend.original[8:12])[0] == 540.0
+        assert struct.unpack("<f", legend.replacement[8:12])[0] == 900.0
+        assert legend.original[:8] == legend.replacement[:8]
+        assert legend.original[12:] == legend.replacement[12:]
 
 
 def test_sor4_bigfile_patch_round_trips_and_preserves_every_other_byte() -> None:
     module = _module()
-    original_raw = _synthetic_bigfile_raw(module, ("original", "original"))
+    original_raw = _synthetic_bigfile_raw(
+        module, tuple("original" for _ in module._BIGFILE_PATCHES)
+    )
     compressed = module._compress_bigfile(original_raw)
 
     assert module._bigfile_patch_locations(original_raw)[0] == "original"
@@ -245,11 +249,13 @@ def test_sor4_bigfile_patch_round_trips_and_preserves_every_other_byte() -> None
     patched = module._rewrite_bigfile(compressed)
     patched_raw = module._decompress_bigfile(patched)
 
-    expected = original_raw
-    for item in module._BIGFILE_PATCHES:
-        assert expected.count(item.original) == 1
-        expected = expected.replace(item.original, item.replacement, 1)
-    assert patched_raw == expected
+    expected = bytearray(original_raw)
+    layout, locations = module._bigfile_patch_locations(original_raw)
+    assert layout == "original"
+    for item, state, offset in locations:
+        assert state == "original"
+        expected[offset : offset + len(item.original)] = item.replacement
+    assert patched_raw == bytes(expected)
     assert len(patched_raw) == len(original_raw)
     assert module._bigfile_patch_locations(patched_raw)[0] == "patched"
     assert module._bigfile_state(patched)[0] == "patched"
@@ -257,7 +263,12 @@ def test_sor4_bigfile_patch_round_trips_and_preserves_every_other_byte() -> None
 
 def test_sor4_bigfile_mixed_state_is_resumable_and_detection_is_loose() -> None:
     module = _module()
-    mixed_raw = bytearray(_synthetic_bigfile_raw(module, ("patched", "original")))
+    mixed_raw = bytearray(
+        _synthetic_bigfile_raw(
+            module,
+            ("patched", *("original" for _ in module._BIGFILE_PATCHES[1:])),
+        )
+    )
     unrelated = mixed_raw.index(b"preserve-me")
     mixed_raw[unrelated : unrelated + len(b"preserve-me")] = b"keep-this!!"
     mixed = module._compress_bigfile(bytes(mixed_raw))
@@ -271,7 +282,8 @@ def test_sor4_bigfile_mixed_state_is_resumable_and_detection_is_loose() -> None:
 
 def test_sor4_bigfile_unrecognized_or_duplicate_target_fails_closed() -> None:
     module = _module()
-    raw = bytearray(_synthetic_bigfile_raw(module, ("original", "original")))
+    all_original = tuple("original" for _ in module._BIGFILE_PATCHES)
+    raw = bytearray(_synthetic_bigfile_raw(module, all_original))
     target = module._BIGFILE_PATCHES[0]
     offset = raw.index(target.original)
     raw[offset + 31 : offset + 35] = struct.pack("<f", -123.0)
@@ -282,7 +294,7 @@ def test_sor4_bigfile_unrecognized_or_duplicate_target_fails_closed() -> None:
     with pytest.raises(module.PatchError, match="not the audited image"):
         module._rewrite_bigfile(compressed)
 
-    duplicate = bytearray(_synthetic_bigfile_raw(module, ("original", "original")))
+    duplicate = bytearray(_synthetic_bigfile_raw(module, all_original))
     struct.pack_into("<i", duplicate, 0, struct.unpack_from("<i", duplicate)[0] + 1)
     duplicate += _bigfile_record(
         "GuiNodeData", target.asset_path, b"duplicate" + target.original
