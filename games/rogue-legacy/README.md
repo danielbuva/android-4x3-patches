@@ -34,12 +34,13 @@ assumptions:
 - pause-menu icon layout
 - an oversized, top-anchored pause dimmer rather than a 1320×720 dimmer
   floating in the middle of the taller view
-- the small standalone lower-left touch icon moved from the old 16:9 bottom
-  edge to the real 4:3 bottom edge; the rune shop itself is unchanged
+- the small square projectile edge marker moved from the old 16:9 bottom
+  clamp to the real 4:3 bottom edge; the touch layout and rune shop are unchanged
 - the animated castle-building gate extended proportionally through the full
-  display height, with viewport clipping instead of warped gears
-- death and boss-death spotlights extended to the 4:3 display midpoint and
-  down to the fallen character
+  display height, right-aligned so its excess width is clipped from the left
+  without warped gears
+- death and boss-death spotlights retain their original top anchor while their
+  vertical beam is extended toward the fallen character
 - screen-local analog/select/back touch artwork hidden from the map,
   teleporter, and Choose Your Legacy screens without removing physical
   controller handling
@@ -127,8 +128,9 @@ XALZ/LZ4 decode and read-back-safe repacking, original/patched/mixed states,
 idempotence, unique-context enforcement, length-preserving managed edits, and
 silent handling of absent or unfamiliar optional branding.
 
-The latest option-row, full-height map-target, proportional loading-gate,
-lower-left touch icon, death-spotlight, pause-dimmer, and screen-local
+The latest option-row, full-height map-target, right-aligned proportional
+loading-gate, projectile edge-marker, top-anchored death-spotlight,
+pause-dimmer, and screen-local
 touch-overlay refinements were
 recognized from the clean reference, rebuilt, signed, and installed in place
 on the physical test device. The installation was returned to adopted storage

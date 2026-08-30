@@ -202,7 +202,7 @@ _REGIONS = (
     # clipped by the 1320-pixel viewport.
     _Region(
         "LoadingScreen.LoadContent",
-        _hx("027b6d130004176f1e160006027b6d130004"),
+        _hx("027b6d130004"),
         0xA,
         _hx("73ea00000a6f0a160006027b6d130004"),
         (
@@ -215,37 +215,95 @@ _REGIONS = (
             _Change("loading gate full-height scale", 0x5, _r4(2.0), _r4(2.75)),
         ),
     ),
-    # Both ordinary and boss deaths used ``40 + spotlight.Height`` for the
-    # bottom of the beam. That remains slightly above the corpse in the taller
-    # view. Place the end of the beam at half the live display height instead;
-    # the horizontal center and the spotlight artwork itself remain unchanged.
+    # Scale the rotated spotlight along its source X axis, which is the screen
+    # Y axis after its 90-degree rotation. Reorder the existing fixed-size
+    # setup block and reuse the nonessential ghost animation-delay slot so the
+    # spotlight keeps its original top anchor and grows only toward the corpse.
     _Region(
-        "GameOverScreen.LayoutScreenObjects",
-        _hx("027b221300047ef81700046b220000003f5a"),
-        0xE,
-        _hx("6b73ea00000a6ffa1500062a"),
+        "GameOverScreen.LoadContent",
+        _hx("027b1f13000411046f65160006"),
+        0x4C,
+        _hx("02141773100400067d2e130004"),
         (
             _Change(
-                "death spotlight vertical reach",
+                "top-anchored death spotlight vertical scale",
                 0,
-                _hx("1f28027b221300046ff115000658"),
-                _hx("00007ef91700046b220000003f5a"),
+                _hx(
+                    "0272bebe017073091700067d21130004"
+                    "027b2113000422cdcccc3d6f29170006"
+                    "02727db1017073091700067d22130004"
+                    "027b22130004220000b4426ff2150006"
+                    "027b22130004176f1e160006"
+                ),
+                _hx(
+                    "0272bebe017073091700067d21130004"
+                    "02727db1017073091700067d22130004"
+                    "027b22130004220000b4426ff2150006"
+                    "027b22130004226666a63f6f06160006"
+                    "027b22130004176f1e160006"
+                ),
             ),
         ),
     ),
     _Region(
-        "GameOverBossScreen.LayoutScreenObjects",
-        _hx("027b171300047ef81700046b220000003f5a"),
-        0xE,
-        _hx("6b73ea00000a6ffa1500062a"),
+        "GameOverBossScreen.LoadContent",
+        _hx("027b1313000411046f65160006"),
+        0x4C,
+        _hx("02141773100400067d19130004"),
         (
             _Change(
-                "boss-death spotlight vertical reach",
+                "top-anchored boss-death spotlight vertical scale",
                 0,
-                _hx("1f28027b171300046ff115000658"),
-                _hx("00007ef91700046b220000003f5a"),
+                _hx(
+                    "0272bebe017073091700067d15130004"
+                    "027b1513000422cdcccc3d6f29170006"
+                    "02727db1017073091700067d17130004"
+                    "027b17130004220000b4426ff2150006"
+                    "027b17130004176f1e160006"
+                ),
+                _hx(
+                    "0272bebe017073091700067d15130004"
+                    "02727db1017073091700067d17130004"
+                    "027b17130004220000b4426ff2150006"
+                    "027b17130004226666a63f6f06160006"
+                    "027b17130004176f1e160006"
+                ),
             ),
         ),
+    ),
+    # The proportional 2.75x gate is 495 pixels wider than the viewport. Move
+    # its container left by exactly that amount so the right edge stays fixed
+    # and the excess is clipped from the left. Both objects are explicitly
+    # drawn by LoadingScreen.Draw, so their redundant ForceDraw flags provide
+    # the fixed-size instruction space for this source-specific X placement.
+    _Region(
+        "LoadingScreen.LoadContent.RightAlignGate",
+        _hx("027b671300041a6f35170006"),
+        0x38,
+        _hx("73ea00000a6f0a160006027b6d130004256ff9150006"),
+        (
+            _Change(
+                "right-align proportional loading gate",
+                0,
+                _hx(
+                    "027b67130004176f1e160006"
+                    "0272e2cc017073631600067d6d130004"
+                    "027b6d130004176f1e160006"
+                ),
+                _hx(
+                    "0272e2cc017073631600067d6d130004"
+                    "027b6d130004220080f7c36ff6150006"
+                    "0000000000000000"
+                ),
+            ),
+        ),
+    ),
+    _Region(
+        "LoadingScreen.Draw",
+        _hx("027b67130004027b6d1300046ff7150006"),
+        0x5,
+        _hx("58027b6d1300046ff9150006"),
+        (_Change("preserve loading-text X after gate alignment", 0, _r4(995), _r4(1490)),),
     ),
     # These two screen-local mobile overlays duplicate the physical controller
     # on handhelds and obscure the map/legacy choices. Suppress their draw
@@ -285,21 +343,21 @@ _REGIONS = (
             ),
         ),
     ),
-    # The small standalone map/rune-looking touch icon is button 9. Its
-    # source layout kept the old 720-line lower-left anchor after gameplay was
-    # expanded. Add the 270 newly visible virtual pixels to this one button's
-    # vertical placement without moving or scaling the other controls.
+    # Projectile edge markers use a fixed 1320x720 clamp even though the live
+    # camera bounds are queried for visibility. The tiny square seen at the
+    # old lower-left safe-area corner is one of these markers, not touch button
+    # 9. Keep the width and extend only its bottom clamp to the 990-line view.
     _Region(
-        "AndroidInputMapper.BuildLayout",
-        _hx("1f0906228fc2753d5a097bbf00000a586907"),
+        "ProjectileIconObj.Update",
+        _hx("1200284e01000a027b06100004596b361502"),
         0x5,
-        _hx("5a097bc000000a586911076911086973f3"),
+        _hx("027b06100004596b28f81500062b1d"),
         (
             _Change(
-                "lower-left standalone touch icon bottom anchor",
+                "projectile edge-marker bottom clamp",
                 0,
-                _r4(0.08),
-                _r4(0.3527272727),
+                _i4(720),
+                _i4(990),
             ),
         ),
     ),

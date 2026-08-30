@@ -289,21 +289,30 @@ def test_rogue_legacy_production_targets_are_guarded_and_length_preserving() -> 
     assert changes["loading gate proportional width scale"].patched == rogue._r4(2.75)
     assert changes["loading gate full-height scale"].original == rogue._r4(2.0)
     assert changes["loading gate full-height scale"].patched == rogue._r4(2.75)
-    assert changes["death spotlight vertical reach"].original == bytes.fromhex(
-        "1f28027b221300046ff115000658"
+    assert len(changes["top-anchored death spotlight vertical scale"].original) == 76
+    assert len(changes["top-anchored death spotlight vertical scale"].patched) == 76
+    assert rogue._r4(1.3) in changes[
+        "top-anchored death spotlight vertical scale"
+    ].patched
+    assert len(changes["top-anchored boss-death spotlight vertical scale"].original) == 76
+    assert len(changes["top-anchored boss-death spotlight vertical scale"].patched) == 76
+    assert rogue._r4(1.3) in changes[
+        "top-anchored boss-death spotlight vertical scale"
+    ].patched
+    assert len(changes["right-align proportional loading gate"].original) == 40
+    assert len(changes["right-align proportional loading gate"].patched) == 40
+    assert rogue._r4(-495) in changes["right-align proportional loading gate"].patched
+    assert changes["preserve loading-text X after gate alignment"].original == rogue._r4(
+        995
     )
-    assert changes["death spotlight vertical reach"].patched == bytes.fromhex(
-        "00007ef91700046b220000003f5a"
+    assert changes["preserve loading-text X after gate alignment"].patched == rogue._r4(
+        1490
     )
     assert changes["hide lineage touch stick"].patched == b"\0" * 6
     assert changes["hide lineage touch select button"].patched == b"\0" * 18
     assert changes["hide map touch buttons"].patched == b"\0" * 12
-    assert changes["lower-left standalone touch icon bottom anchor"].original == rogue._r4(
-        0.08
-    )
-    assert changes["lower-left standalone touch icon bottom anchor"].patched == rogue._r4(
-        0.3527272727
-    )
+    assert changes["projectile edge-marker bottom clamp"].original == rogue._i4(720)
+    assert changes["projectile edge-marker bottom clamp"].patched == rogue._i4(990)
     assert len(changes["pause dimmer top anchor"].original) == 24
     assert len(changes["pause dimmer top anchor"].patched) == 24
     assert changes["pause dimmer height from SetWidth"].patched == bytes.fromhex(
