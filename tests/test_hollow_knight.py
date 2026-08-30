@@ -144,6 +144,165 @@ def test_disclaimer_scaler_requires_expand_mode_structure() -> None:
     assert hk._disclaimer_scaler_state(raw) == ("unsupported", None)
 
 
+def test_mono_ui_scaler_accepts_only_guarded_1080_and_1440_references() -> None:
+    source = bytearray(32)
+    source.extend(struct.pack("<iffffif", 1, 100.0, 1.0, 1920.0, 1080.0, 1, 0.0))
+    source.extend(b"synthetic trailing fields")
+    assert hk._ui_scaler_state(source) == ("original", 48)
+
+    struct.pack_into("<f", source, 48, 1440.0)
+    assert hk._ui_scaler_state(source) == ("patched", 48)
+
+    struct.pack_into("<f", source, 48, 1200.0)
+    assert hk._ui_scaler_state(source) == ("unsupported", None)
+
+
+def _hud_trees(camera_size, x, y, scale):
+    return (
+        {"orthographic size": camera_size},
+        {
+            "m_LocalPosition": {"x": x, "y": y, "z": 38.1},
+            "m_LocalScale": {"x": scale, "y": scale, "z": 1.0},
+        },
+    )
+
+
+def test_mono_hud_layout_migrates_original_and_first_release() -> None:
+    source = _hud_trees(
+        hk.HUD_ORTHO_SOURCE,
+        hk.HUD_CANVAS_SOURCE_X,
+        hk.HUD_CANVAS_SOURCE_Y,
+        hk.MONO_HUD_SCALE_SOURCE,
+    )
+    first_release = _hud_trees(
+        hk.HUD_ORTHO_TARGET,
+        hk.HUD_CANVAS_SOURCE_X,
+        hk.MONO_HUD_V1_CANVAS_Y,
+        hk.MONO_HUD_SCALE_SOURCE,
+    )
+    final = _hud_trees(
+        hk.MONO_HUD_ORTHO_TARGET,
+        hk.MONO_HUD_CANVAS_TARGET_X,
+        hk.MONO_HUD_CANVAS_TARGET_Y,
+        hk.MONO_HUD_SCALE_TARGET,
+    )
+    enlarged_release = _hud_trees(
+        hk.HUD_ORTHO_TARGET,
+        hk.MONO_HUD_V2_CANVAS_X,
+        hk.MONO_HUD_V2_CANVAS_Y,
+        hk.MONO_HUD_SCALE_V2,
+    )
+    fitted_inventory_release = _hud_trees(
+        hk.HUD_ORTHO_TARGET,
+        hk.MONO_HUD_V3_CANVAS_X,
+        hk.MONO_HUD_V3_CANVAS_Y,
+        hk.MONO_HUD_SCALE_SOURCE,
+    )
+
+    assert hk._mono_hud_layout_state(*source) == "original"
+    assert hk._mono_hud_layout_state(*first_release) == "original"
+    assert hk._mono_hud_layout_state(*enlarged_release) == "original"
+    assert hk._mono_hud_layout_state(*fitted_inventory_release) == "original"
+    assert hk._mono_hud_layout_state(*final) == "patched"
+
+
+def test_mono_hud_layout_rejects_unrecognized_safe_area_values() -> None:
+    unknown = _hud_trees(hk.HUD_ORTHO_TARGET, -6.25, 8.0, 1.1)
+    assert hk._mono_hud_layout_state(*unknown) == "unsupported"
+
+
+def test_mono_hud_fsm_scale_is_unique_and_length_preserving() -> None:
+    source = hk._hud_fsm_scale_pattern(hk.MONO_HUD_SCALE_SOURCE)
+    patched = hk._hud_fsm_scale_pattern(hk.MONO_HUD_SCALE_TARGET)
+    prefix = b"Slide Out\0HutongGames.PlayMaker.Actions.iTweenScaleTo\0"
+
+    state, offset = hk._mono_hud_fsm_state(prefix + source)
+    assert state == "original"
+    assert offset == len(prefix)
+    assert len(source) == len(patched)
+
+    assert hk._mono_hud_fsm_state(prefix + patched)[0] == "patched"
+    assert hk._mono_hud_fsm_state(prefix + source + source)[0] == "ambiguous"
+
+
+def test_mono_inventory_root_migrates_prior_scaled_releases() -> None:
+    source = {
+        "m_LocalPosition": {
+            "x": hk.INVENTORY_SOURCE_POSITION[0],
+            "y": hk.INVENTORY_SOURCE_POSITION[1],
+            "z": 40.4,
+        },
+        "m_LocalScale": {"x": 1.0, "y": 1.0, "z": 1.0},
+    }
+    patched = {
+        "m_LocalPosition": {
+            "x": hk.INVENTORY_TARGET_POSITION[0],
+            "y": hk.INVENTORY_TARGET_POSITION[1],
+            "z": 40.4,
+        },
+        "m_LocalScale": {
+            "x": hk.INVENTORY_SCALE_TARGET,
+            "y": hk.INVENTORY_SCALE_TARGET,
+            "z": 1.0,
+        },
+    }
+
+    assert hk._mono_inventory_layout_state(source) == "patched"
+    assert hk._mono_inventory_layout_state(patched) == "original"
+
+    first_release = {
+        "m_LocalPosition": {
+            "x": hk.INVENTORY_V1_POSITION[0],
+            "y": hk.INVENTORY_V1_POSITION[1],
+            "z": 40.4,
+        },
+        "m_LocalScale": {
+            "x": hk.INVENTORY_SCALE_V1,
+            "y": hk.INVENTORY_SCALE_V1,
+            "z": 1.0,
+        },
+    }
+    assert hk._mono_inventory_layout_state(first_release) == "original"
+
+def test_mono_inventory_panes_use_uniform_fit_without_stretching() -> None:
+    source = {
+        "m_LocalScale": {
+            "x": hk.INVENTORY_CHILD_SCALE_V1,
+            "y": hk.INVENTORY_CHILD_SCALE_V1,
+            "z": 1.0,
+        }
+    }
+    patched = {
+        "m_LocalScale": {
+            "x": hk.INVENTORY_CHILD_SCALE_TARGET,
+            "y": hk.INVENTORY_CHILD_SCALE_TARGET,
+            "z": 1.0,
+        }
+    }
+    assert hk._mono_inventory_child_state(source) == "original"
+    assert hk._mono_inventory_child_state(patched) == "patched"
+    assert patched["m_LocalScale"]["x"] == patched["m_LocalScale"]["y"]
+
+
+def test_mono_touch_layout_migrates_first_release_to_real_top_edge() -> None:
+    def tree(anchor, position):
+        return {
+            "m_AnchorMin": {"x": 0.5, "y": anchor},
+            "m_AnchorMax": {"x": 0.5, "y": anchor},
+            "m_AnchoredPosition": {"x": 0.0, "y": position},
+        }
+
+    assert hk._mono_touch_layout_state(
+        tree(0.5, hk.MONO_TOUCH_SOURCE_POSITION_Y)
+    ) == "original"
+    assert hk._mono_touch_layout_state(
+        tree(1.0, hk.MONO_TOUCH_V1_POSITION_Y)
+    ) == "original"
+    assert hk._mono_touch_layout_state(
+        tree(1.0, hk.MONO_TOUCH_TARGET_POSITION_Y)
+    ) == "patched"
+
+
 def test_mono_and_il2cpp_runtime_entries_are_both_discoverable() -> None:
     config = (REPO_ROOT / "games" / "hollow-knight" / "config.json").read_text(
         encoding="utf-8"

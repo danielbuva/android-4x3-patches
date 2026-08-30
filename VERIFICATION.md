@@ -38,13 +38,15 @@ does not weaken structural compatibility checks.
 
 The Mono implementation was reproduced from its unmodified source APK with the
 public patch command, rebuilt, aligned, signed, and recognized as patched by the
-post-build target probe. The signed APK was installed on adopted internal
-storage and cold-launched on the 1280×960 physical device. The disclaimer,
-language selection, startup logos, main menu, profile/overscan/brightness UI,
-opening sequence, and initial gameplay all rendered, and the process remained
-alive without a fatal exception. Final gameplay-wide visual acceptance remains
-the device owner's check; this record describes the completed structural and
-physical smoke verification.
+post-build target probe. After discovering that this port retains an extracted
+Unity bundle across replace-installs, the signed APK was clean-installed on
+adopted internal storage and cold-launched on the 1280×960 physical device. The
+disclaimer, language selection, startup logos, main menu,
+profile/overscan/brightness UI, opening sequence, initial gameplay, top-edge
+HUD/touch layout, and inventory were exercised. The inventory's central frame
+and page composition fit the 4:3 display without horizontal stretching, and
+the process remained alive without a fatal exception. Final gameplay-wide
+acceptance remains the device owner's check.
 
 ## Native 4:3 and deferred titles
 

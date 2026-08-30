@@ -75,7 +75,17 @@ Patch an APK:
 ./patch.sh "/path/to/Game.apk"
 ```
 
-### Windows
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/danielbuva/android-4x3-patches.git
+Set-Location android-4x3-patches
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\patch.ps1 "C:\path\to\Game.apk"
+```
+
+### Windows Command Prompt
 
 ```bat
 git clone https://github.com/danielbuva/android-4x3-patches.git

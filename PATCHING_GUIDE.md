@@ -56,7 +56,16 @@ python3 -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-### Windows
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/danielbuva/android-4x3-patches.git
+Set-Location android-4x3-patches
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+### Windows Command Prompt
 
 ```bat
 git clone https://github.com/danielbuva/android-4x3-patches.git
@@ -66,6 +75,9 @@ py -3 -m venv .venv
 ```
 
 You only need to do this setup once per copy of the repository. Later, open a terminal in this folder and run the patch command below.
+When updating an existing checkout, run `git pull` and repeat the dependency
+installation command so newly added game support and Python packages stay in
+sync.
 
 ## 3. Copy the APK from Android, if necessary
 
@@ -93,7 +105,16 @@ Use `--check` before making an output. Replace the example path with your own AP
 ./patch.sh --check "/path/to/Your Game.apk"
 ```
 
-### Windows
+### Windows PowerShell
+
+```powershell
+.\patch.ps1 --check "C:\path\to\Your Game.apk"
+```
+
+If local PowerShell policy blocks `.ps1` files, use the Command Prompt launcher
+from PowerShell as `.\patch.bat --check "C:\path\to\Your Game.apk"`.
+
+### Windows Command Prompt
 
 ```bat
 patch.bat --check "C:\path\to\Your Game.apk"
@@ -111,7 +132,13 @@ Run the same command without `--check`.
 ./patch.sh "/path/to/Your Game.apk"
 ```
 
-### Windows
+### Windows PowerShell
+
+```powershell
+.\patch.ps1 "C:\path\to\Your Game.apk"
+```
+
+### Windows Command Prompt
 
 ```bat
 patch.bat "C:\path\to\Your Game.apk"
@@ -131,7 +158,13 @@ For any game labeled **Experimental**, add the acknowledgement flag before the i
 ./patch.sh --allow-experimental "/path/to/Your Game.apk"
 ```
 
-On Windows, the equivalent is:
+On Windows PowerShell, the equivalent is:
+
+```powershell
+.\patch.ps1 --allow-experimental "C:\path\to\Your Game.apk"
+```
+
+In Windows Command Prompt, use:
 
 ```bat
 patch.bat --allow-experimental "C:\path\to\Your Game.apk"
@@ -177,6 +210,13 @@ locally generated key (or the same custom key):
 adb install -r --no-streaming "/path/to/Game-4x3.apk"
 ```
 
+The Hollow Knight 1.3.0.0 Mono port is a special case: it extracts its large
+Unity bundle into private app storage on first run. A replace-install of another
+APK with the same version can keep loading that older extracted copy. Back up
+any saves you want, uninstall the existing Mono port, and install the new APK
+cleanly when testing a revised Hollow Knight patch. This does not apply to the
+earlier IL2CPP Hollow Knight port.
+
 If Android reports a signature conflict, do **not** immediately uninstall the old app. First back up any saves you care about. Once that is done, remove the old differently signed installation through Android and install the patched APK again. Whether cloud saves restore depends on the game and the account you use.
 
 ## What the patcher does automatically
@@ -198,7 +238,9 @@ The patcher preserves cloud saves, Play Games, billing, purchases, and unrelated
 | `CRC verification failed` | The APK is incomplete or corrupt. Obtain a clean copy instead of forcing the patch. |
 | `UndertaleModTool` is missing | Install its CLI for Advent Neon, FAITH, or Hotline Miami, then set `ANDROID_4X3_UMT` to it. |
 | `unsupported` or `ambiguous` | Your APK build has changed a required target. It is not safe to patch with this release. |
+| The same APK is supported on one computer but not another | Update both checkouts with `git pull`, then reinstall `requirements.txt`. Compatibility detection itself is platform-independent. |
 | Android rejects installation | The installed app has a different signing key. Back up saves before replacing it. |
+| A revised Hollow Knight 1.3.0.0 APK still shows the old HUD | The Mono port cached its extracted Unity bundle. Back up saves, uninstall that installation, then install the revised APK cleanly. |
 | Baba Is You is still cut off | This is the documented experimental limitation. |
 | Advent Neon shows unfinished room edges or framing | Its initial 4:3 pass is structurally verified but still requires device-side visual iteration. |
 

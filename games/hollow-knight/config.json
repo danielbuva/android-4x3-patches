@@ -15,6 +15,7 @@
   "features": [
     "expanded 4:3 world view",
     "4:3 HUD placement",
+    "4:3 inventory fit",
     "top-edge touch-control placement"
   ],
   "required_entries": [

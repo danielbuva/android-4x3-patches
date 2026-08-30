@@ -20,12 +20,59 @@ SOURCE_ASPECT = 16.0 / 9.0
 TARGET_ASPECT = 4.0 / 3.0
 HUD_ORTHO_SOURCE = 8.710663795471191
 HUD_ORTHO_TARGET = HUD_ORTHO_SOURCE * SOURCE_ASPECT / TARGET_ASPECT
+# The Mono port's inventory prefab restores its own 16:9 transform hierarchy at
+# runtime. Give the dedicated HUD camera enough horizontal room for that prefab,
+# then compensate the gameplay HUD scale below. This does not affect the world
+# camera or gameplay framing.
+MONO_HUD_ORTHO_TARGET = HUD_ORTHO_TARGET * SOURCE_ASPECT / TARGET_ASPECT
+HUD_CANVAS_SOURCE_X = -8.710000038146973
 HUD_CANVAS_SOURCE_Y = 6.6
-HUD_CANVAS_TARGET_Y = HUD_CANVAS_SOURCE_Y + HUD_ORTHO_TARGET - HUD_ORTHO_SOURCE
+IL2CPP_HUD_CANVAS_TARGET_Y = HUD_CANVAS_SOURCE_Y + HUD_ORTHO_TARGET - HUD_ORTHO_SOURCE
+# Earlier Mono implementations expanded the HUD camera, then briefly enlarged
+# the world-space HUD without fitting the inventory. The final layout expands
+# the dedicated camera again and compensates the gameplay HUD scale and
+# placement. Keeping every released value here lets prior APKs migrate safely.
+MONO_HUD_V1_CANVAS_Y = IL2CPP_HUD_CANVAS_TARGET_Y
+MONO_HUD_V2_CANVAS_X = HUD_CANVAS_SOURCE_X + 1.2
+MONO_HUD_V2_CANVAS_Y = MONO_HUD_V1_CANVAS_Y + 1.1
+# Keep the health frame's decorative left edge on-screen. The canvas contains
+# the left-side gameplay HUD; right-side mobile controls live on another canvas.
+MONO_HUD_V3_CANVAS_X = HUD_CANVAS_SOURCE_X + 0.8
+MONO_HUD_V3_CANVAS_Y = 10.8
+MONO_HUD_CANVAS_TARGET_X = MONO_HUD_V3_CANVAS_X * SOURCE_ASPECT / TARGET_ASPECT
+MONO_HUD_CANVAS_TARGET_Y = MONO_HUD_V3_CANVAS_Y * SOURCE_ASPECT / TARGET_ASPECT
+MONO_HUD_SCALE_SOURCE = 1.0
+MONO_HUD_SCALE_V2 = SOURCE_ASPECT / TARGET_ASPECT
+MONO_HUD_SCALE_TARGET = SOURCE_ASPECT / TARGET_ASPECT
+UI_REFERENCE_HEIGHT_SOURCE = 1080.0
+UI_REFERENCE_HEIGHT_TARGET = 1440.0
+HUD_FSM_SCALE_TIME = 0.15000000596046448
+INVENTORY_SCALE_V1 = TARGET_ASPECT / SOURCE_ASPECT
+INVENTORY_SCALE_TARGET = INVENTORY_SCALE_V1 * TARGET_ASPECT / SOURCE_ASPECT
+INVENTORY_SOURCE_POSITION = (-4.050000190734863, 7.550000190734863)
+INVENTORY_V1_POSITION = tuple(
+    value * INVENTORY_SCALE_V1 for value in INVENTORY_SOURCE_POSITION
+)
+INVENTORY_TARGET_POSITION = tuple(
+    value * INVENTORY_SCALE_TARGET for value in INVENTORY_SOURCE_POSITION
+)
+INVENTORY_CHILD_SCALE_V1 = TARGET_ASPECT / SOURCE_ASPECT
+INVENTORY_CHILD_SCALE_TARGET = 1.0
+INVENTORY_CHILDREN = (
+    "Border",
+    "Charms",
+    "Inv",
+    "Journal",
+    "Map",
+    "Map Key",
+)
 CAMERA_LIMIT_SOURCE = 8.300000190734863
 CAMERA_LIMIT_TARGET = CAMERA_LIMIT_SOURCE * SOURCE_ASPECT / TARGET_ASPECT
 REFERENCE_UI_HEIGHT = 1080.0
 REFERENCE_UI_HALF_HEIGHT = REFERENCE_UI_HEIGHT / 2.0
+MONO_TOUCH_SOURCE_POSITION_Y = 125.0
+MONO_TOUCH_V1_POSITION_Y = MONO_TOUCH_SOURCE_POSITION_Y - REFERENCE_UI_HALF_HEIGHT
+MONO_TOUCH_TARGET_POSITION_Y = -125.0
 
 DISCLAIMER_SCALE_SOURCE = 0.5492802262306213
 # The source text is wider than its nominal 1920-pixel canvas. Leave a small
@@ -207,7 +254,9 @@ def _unity_targets(path: Path) -> list[dict[str, Any]]:
             else:
                 try:
                     value = canvases[0].read_typetree()["m_LocalPosition"]["y"]
-                    state = _value_state(value, HUD_CANVAS_SOURCE_Y, HUD_CANVAS_TARGET_Y)
+                    state = _value_state(
+                        value, HUD_CANVAS_SOURCE_Y, IL2CPP_HUD_CANVAS_TARGET_Y
+                    )
                     targets.append(
                         _target(f"{asset_name}: HUD canvas", state, value=float(value))
                     )
@@ -274,6 +323,7 @@ def _script_component_reader(
     if global_assets is None:
         return []
     transforms = _path_readers(assets_file, "RectTransform", game_object_path)
+    transforms.extend(_path_readers(assets_file, "Transform", game_object_path))
     if len(transforms) != 1:
         return []
     game_object = transforms[0].read().m_GameObject.read()
@@ -311,6 +361,193 @@ def _disclaimer_scaler_state(raw: bytes | bytearray) -> tuple[str, int | None]:
     if len(offsets) > 1:
         return "ambiguous", None
     return "unsupported", None
+
+
+def _ui_scaler_state(raw: bytes | bytearray) -> tuple[str, int | None]:
+    """Recognize the gameplay/menu CanvasScaler reference-resolution field."""
+
+    candidates: list[tuple[str, int]] = []
+    for width_offset in _float_offsets(raw, 1920.0):
+        height_offset = width_offset + 4
+        if width_offset < 12 or height_offset + 12 > len(raw):
+            continue
+        scale_mode = struct.unpack_from("<i", raw, width_offset - 12)[0]
+        scale_factor, reference_ppu = struct.unpack_from(
+            "<ff", raw, width_offset - 8
+        )
+        height = struct.unpack_from("<f", raw, height_offset)[0]
+        mode, match = struct.unpack_from("<if", raw, height_offset + 4)
+        if (
+            scale_mode != 1
+            or not math.isfinite(scale_factor)
+            or scale_factor <= 0.0
+            or not _near(reference_ppu, 1.0)
+            or mode != 1
+            or not _near(match, 0.0)
+        ):
+            continue
+        state = _value_state(
+            height, UI_REFERENCE_HEIGHT_SOURCE, UI_REFERENCE_HEIGHT_TARGET
+        )
+        if state != "unsupported":
+            candidates.append((state, height_offset))
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        return "ambiguous", None
+    return "unsupported", None
+
+
+def _mono_hud_layout_state(camera_tree: dict[str, Any], canvas_tree: dict[str, Any]) -> str:
+    camera_size = float(camera_tree["orthographic size"])
+    position = canvas_tree["m_LocalPosition"]
+    scale = canvas_tree["m_LocalScale"]
+    recognized = (
+        any(
+            _near(camera_size, value)
+            for value in (HUD_ORTHO_SOURCE, HUD_ORTHO_TARGET, MONO_HUD_ORTHO_TARGET)
+        )
+        and any(
+            _near(position["x"], value)
+            for value in (
+                HUD_CANVAS_SOURCE_X,
+                MONO_HUD_V2_CANVAS_X,
+                MONO_HUD_V3_CANVAS_X,
+                MONO_HUD_CANVAS_TARGET_X,
+            )
+        )
+        and any(
+            _near(position["y"], value)
+            for value in (
+                HUD_CANVAS_SOURCE_Y,
+                MONO_HUD_V1_CANVAS_Y,
+                MONO_HUD_V2_CANVAS_Y,
+                MONO_HUD_V3_CANVAS_Y,
+                MONO_HUD_CANVAS_TARGET_Y,
+            )
+        )
+        and all(
+            any(
+                _near(scale[axis], value)
+                for value in (
+                    MONO_HUD_SCALE_SOURCE,
+                    MONO_HUD_SCALE_V2,
+                    MONO_HUD_SCALE_TARGET,
+                )
+            )
+            for axis in ("x", "y")
+        )
+        and _near(scale["z"], 1.0)
+    )
+    if not recognized:
+        return "unsupported"
+    final = (
+        _near(camera_size, MONO_HUD_ORTHO_TARGET)
+        and _near(position["x"], MONO_HUD_CANVAS_TARGET_X)
+        and _near(position["y"], MONO_HUD_CANVAS_TARGET_Y)
+        and _near(scale["x"], MONO_HUD_SCALE_TARGET)
+        and _near(scale["y"], MONO_HUD_SCALE_TARGET)
+    )
+    return "patched" if final else "original"
+
+
+def _hud_fsm_scale_pattern(value: float) -> bytes:
+    return (
+        b"\x00"
+        + struct.pack("<fff", value, value, value)
+        + b"\x00"
+        + struct.pack("<f", HUD_FSM_SCALE_TIME)
+        + b"\x01Scale Time"
+    )
+
+
+def _mono_hud_fsm_state(raw: bytes | bytearray) -> tuple[str, int | None]:
+    """Locate the Slide Out FSM's Come In scale without decoding game data."""
+
+    if raw.count(b"Slide Out") != 1 or raw.count(b"iTweenScaleTo") < 1:
+        return "unsupported", None
+    prior = _byte_offsets(raw, _hud_fsm_scale_pattern(MONO_HUD_SCALE_SOURCE))
+    target = _byte_offsets(raw, _hud_fsm_scale_pattern(MONO_HUD_SCALE_TARGET))
+    if len(prior) == 1 and not target:
+        return "original", prior[0]
+    if len(target) == 1 and not prior:
+        return "patched", target[0]
+    if prior or target:
+        return "ambiguous", None
+    return "unsupported", None
+
+
+def _mono_inventory_layout_state(tree: dict[str, Any]) -> str:
+    position = tree["m_LocalPosition"]
+    scale = tree["m_LocalScale"]
+    recognized = (
+        all(
+            any(
+                _near(position[axis], value)
+                for value in (
+                    INVENTORY_SOURCE_POSITION[index],
+                    INVENTORY_V1_POSITION[index],
+                    INVENTORY_TARGET_POSITION[index],
+                )
+            )
+            for index, axis in enumerate(("x", "y"))
+        )
+        and all(
+            any(
+                _near(scale[axis], value)
+                for value in (1.0, INVENTORY_SCALE_V1, INVENTORY_SCALE_TARGET)
+            )
+            for axis in ("x", "y")
+        )
+        and _near(scale["z"], 1.0)
+    )
+    if not recognized:
+        return "unsupported"
+    final = (
+        _near(position["x"], INVENTORY_SOURCE_POSITION[0])
+        and _near(position["y"], INVENTORY_SOURCE_POSITION[1])
+        and _near(scale["x"], 1.0)
+        and _near(scale["y"], 1.0)
+    )
+    return "patched" if final else "original"
+
+
+def _mono_inventory_child_state(tree: dict[str, Any]) -> str:
+    scale = tree["m_LocalScale"]
+    if (
+        _near(scale["x"], INVENTORY_CHILD_SCALE_TARGET)
+        and _near(scale["y"], INVENTORY_CHILD_SCALE_TARGET)
+    ):
+        return "patched"
+    if (
+        _near(scale["x"], INVENTORY_CHILD_SCALE_V1)
+        and _near(scale["y"], INVENTORY_CHILD_SCALE_V1)
+    ):
+        return "original"
+    return "unsupported"
+
+
+def _mono_touch_layout_state(tree: dict[str, Any]) -> str:
+    min_y = float(tree["m_AnchorMin"]["y"])
+    max_y = float(tree["m_AnchorMax"]["y"])
+    position_y = float(tree["m_AnchoredPosition"]["y"])
+    if (
+        _near(min_y, 1.0)
+        and _near(max_y, 1.0)
+        and _near(position_y, MONO_TOUCH_TARGET_POSITION_Y)
+    ):
+        return "patched"
+    if (
+        _near(min_y, 0.5)
+        and _near(max_y, 0.5)
+        and _near(position_y, MONO_TOUCH_SOURCE_POSITION_Y)
+    ) or (
+        _near(min_y, 1.0)
+        and _near(max_y, 1.0)
+        and _near(position_y, MONO_TOUCH_V1_POSITION_Y)
+    ):
+        return "original"
+    return "unsupported"
 
 
 def _mono_unity_targets(path: Path) -> list[dict[str, Any]]:
@@ -369,35 +606,105 @@ def _mono_unity_targets(path: Path) -> list[dict[str, Any]]:
         if resources is None:
             targets.append(_target("Mono resources.assets", "unsupported"))
         else:
-            cameras = _path_readers(resources, "Camera", "_GameCameras/HudCamera")
-            if len(cameras) != 1:
-                state = "ambiguous" if len(cameras) > 1 else "unsupported"
-                targets.append(_target("Mono HUD camera", state, matches=len(cameras)))
-            else:
-                value = cameras[0].read_typetree()["orthographic size"]
+            ui_scalers = _script_component_reader(
+                bundle, resources, "_UIManager/UICanvas", "CanvasScaler"
+            )
+            if len(ui_scalers) != 1:
+                state = "ambiguous" if len(ui_scalers) > 1 else "unsupported"
                 targets.append(
-                    _target(
-                        "Mono HUD camera",
-                        _value_state(value, HUD_ORTHO_SOURCE, HUD_ORTHO_TARGET),
-                        value=float(value),
-                    )
+                    _target("Mono 4:3 UI reference", state, matches=len(ui_scalers))
                 )
+            else:
+                state, _ = _ui_scaler_state(ui_scalers[0].get_raw_data())
+                targets.append(_target("Mono 4:3 UI reference", state))
 
+            cameras = _path_readers(resources, "Camera", "_GameCameras/HudCamera")
             canvases = _path_readers(
                 resources, "Transform", "_GameCameras/HudCamera/Hud Canvas"
             )
-            if len(canvases) != 1:
-                state = "ambiguous" if len(canvases) > 1 else "unsupported"
-                targets.append(_target("Mono HUD top edge", state, matches=len(canvases)))
-            else:
-                value = canvases[0].read_typetree()["m_LocalPosition"]["y"]
+            if len(cameras) != 1 or len(canvases) != 1:
+                state = (
+                    "ambiguous"
+                    if len(cameras) > 1 or len(canvases) > 1
+                    else "unsupported"
+                )
                 targets.append(
                     _target(
-                        "Mono HUD top edge",
-                        _value_state(value, HUD_CANVAS_SOURCE_Y, HUD_CANVAS_TARGET_Y),
-                        value=float(value),
+                        "Mono 4:3 gameplay HUD",
+                        state,
+                        cameras=len(cameras),
+                        canvases=len(canvases),
                     )
                 )
+
+            else:
+                camera_tree = cameras[0].read_typetree()
+                canvas_tree = canvases[0].read_typetree()
+                targets.append(
+                    _target(
+                        "Mono 4:3 gameplay HUD",
+                        _mono_hud_layout_state(camera_tree, canvas_tree),
+                        camera_size=float(camera_tree["orthographic size"]),
+                        position_x=float(canvas_tree["m_LocalPosition"]["x"]),
+                        position_y=float(canvas_tree["m_LocalPosition"]["y"]),
+                        scale_x=float(canvas_tree["m_LocalScale"]["x"]),
+                        scale_y=float(canvas_tree["m_LocalScale"]["y"]),
+                    )
+                )
+
+            hud_fsms = _script_component_reader(
+                bundle, resources, "_GameCameras/HudCamera/Hud Canvas", "PlayMakerFSM"
+            )
+            recognized_fsms = []
+            for reader in hud_fsms:
+                fsm_state, _ = _mono_hud_fsm_state(reader.get_raw_data())
+                if fsm_state != "unsupported":
+                    recognized_fsms.append((fsm_state, reader))
+            if len(recognized_fsms) != 1:
+                state = "ambiguous" if len(recognized_fsms) > 1 else "unsupported"
+                targets.append(
+                    _target(
+                        "Mono runtime gameplay HUD scale",
+                        state,
+                        matches=len(recognized_fsms),
+                    )
+                )
+            else:
+                targets.append(
+                    _target("Mono runtime gameplay HUD scale", recognized_fsms[0][0])
+                )
+
+            inventories = _path_readers(
+                resources, "Transform", "_GameCameras/HudCamera/Inventory"
+            )
+            if len(inventories) != 1:
+                state = "ambiguous" if len(inventories) > 1 else "unsupported"
+                targets.append(
+                    _target("Mono 4:3 inventory fit", state, matches=len(inventories))
+                )
+            else:
+                inventory_tree = inventories[0].read_typetree()
+                targets.append(
+                    _target(
+                        "Mono 4:3 inventory fit",
+                        _mono_inventory_layout_state(inventory_tree),
+                        position_x=float(inventory_tree["m_LocalPosition"]["x"]),
+                        position_y=float(inventory_tree["m_LocalPosition"]["y"]),
+                        scale_x=float(inventory_tree["m_LocalScale"]["x"]),
+                        scale_y=float(inventory_tree["m_LocalScale"]["y"]),
+                    )
+                )
+
+            for name in INVENTORY_CHILDREN:
+                path_name = f"_GameCameras/HudCamera/Inventory/{name}"
+                readers = _path_readers(resources, "Transform", path_name)
+                target_name = f"Mono 4:3 inventory pane: {name}"
+                if len(readers) != 1:
+                    state = "ambiguous" if len(readers) > 1 else "unsupported"
+                    targets.append(_target(target_name, state, matches=len(readers)))
+                    continue
+                tree = readers[0].read_typetree()
+                targets.append(_target(target_name, _mono_inventory_child_state(tree)))
 
             for name in sorted(MONO_TOUCH_BUTTONS):
                 path_name = f"_InControlManager/TouchControls/{name}"
@@ -411,20 +718,7 @@ def _mono_unity_targets(path: Path) -> list[dict[str, Any]]:
                 min_y = float(tree["m_AnchorMin"]["y"])
                 max_y = float(tree["m_AnchorMax"]["y"])
                 position_y = float(tree["m_AnchoredPosition"]["y"])
-                if (
-                    _near(min_y, 0.5)
-                    and _near(max_y, 0.5)
-                    and _near(position_y, 125.0)
-                ):
-                    state = "original"
-                elif (
-                    _near(min_y, 1.0)
-                    and _near(max_y, 1.0)
-                    and _near(position_y, 125.0 - REFERENCE_UI_HALF_HEIGHT)
-                ):
-                    state = "patched"
-                else:
-                    state = "unsupported"
+                state = _mono_touch_layout_state(tree)
                 targets.append(
                     _target(
                         target_name,
@@ -705,6 +999,18 @@ def _managed_targets(
     branch, branch_edits = _managed_black_bars_target(assembly)
     targets.append(branch)
     edits.extend(branch_edits)
+    ui_reference, ui_reference_edits = _managed_float_target(
+        assembly,
+        "GameCameras",
+        "SetOverscan",
+        1,
+        1,
+        UI_REFERENCE_HEIGHT_SOURCE,
+        UI_REFERENCE_HEIGHT_TARGET,
+        "Mono 4:3 runtime UI reference",
+    )
+    targets.append(ui_reference)
+    edits.extend(ui_reference_edits)
     for type_name, method_name, method_count, literal_count in MANAGED_BOUND_METHODS:
         target, method_edits = _managed_float_target(
             assembly,
@@ -833,7 +1139,7 @@ def _patch_unity(source: Path, destination: Path) -> bool:
             )[0]
             tree = canvas.read_typetree()
             if _near(tree["m_LocalPosition"]["y"], HUD_CANVAS_SOURCE_Y):
-                tree["m_LocalPosition"]["y"] = HUD_CANVAS_TARGET_Y
+                tree["m_LocalPosition"]["y"] = IL2CPP_HUD_CANVAS_TARGET_Y
                 canvas.save_typetree(tree)
                 changed = True
 
@@ -891,10 +1197,25 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
             changed = True
 
         resources = bundle.files["resources.assets"]
+        ui_scaler = _script_component_reader(
+            bundle, resources, "_UIManager/UICanvas", "CanvasScaler"
+        )[0]
+        raw = bytearray(ui_scaler.get_raw_data())
+        scaler_state, height_offset = _ui_scaler_state(raw)
+        if scaler_state == "original" and height_offset is not None:
+            struct.pack_into("<f", raw, height_offset, UI_REFERENCE_HEIGHT_TARGET)
+            ui_scaler.set_raw_data(bytes(raw))
+            changed = True
+        elif scaler_state != "patched":
+            raise PatchError("Hollow Knight Mono UI CanvasScaler changed")
+
         camera = _path_readers(resources, "Camera", "_GameCameras/HudCamera")[0]
         tree = camera.read_typetree()
-        if _near(tree["orthographic size"], HUD_ORTHO_SOURCE):
-            tree["orthographic size"] = HUD_ORTHO_TARGET
+        if any(
+            _near(tree["orthographic size"], value)
+            for value in (HUD_ORTHO_SOURCE, HUD_ORTHO_TARGET)
+        ):
+            tree["orthographic size"] = MONO_HUD_ORTHO_TARGET
             camera.save_typetree(tree)
             changed = True
 
@@ -902,10 +1223,67 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
             resources, "Transform", "_GameCameras/HudCamera/Hud Canvas"
         )[0]
         tree = canvas.read_typetree()
-        if _near(tree["m_LocalPosition"]["y"], HUD_CANVAS_SOURCE_Y):
-            tree["m_LocalPosition"]["y"] = HUD_CANVAS_TARGET_Y
+        if _mono_hud_layout_state(camera.read_typetree(), tree) == "original":
+            tree["m_LocalPosition"]["x"] = MONO_HUD_CANVAS_TARGET_X
+            tree["m_LocalPosition"]["y"] = MONO_HUD_CANVAS_TARGET_Y
+            tree["m_LocalScale"]["x"] = MONO_HUD_SCALE_TARGET
+            tree["m_LocalScale"]["y"] = MONO_HUD_SCALE_TARGET
             canvas.save_typetree(tree)
             changed = True
+
+        hud_fsms = _script_component_reader(
+            bundle, resources, "_GameCameras/HudCamera/Hud Canvas", "PlayMakerFSM"
+        )
+        recognized_fsms = []
+        for reader in hud_fsms:
+            fsm_state, offset = _mono_hud_fsm_state(reader.get_raw_data())
+            if fsm_state != "unsupported":
+                recognized_fsms.append((fsm_state, offset, reader))
+        if len(recognized_fsms) != 1:
+            raise PatchError("Hollow Knight Mono HUD scale FSM changed")
+        fsm_state, offset, hud_fsm = recognized_fsms[0]
+        if fsm_state == "original" and offset is not None:
+            raw = bytearray(hud_fsm.get_raw_data())
+            source_pattern = _hud_fsm_scale_pattern(MONO_HUD_SCALE_SOURCE)
+            target_pattern = _hud_fsm_scale_pattern(MONO_HUD_SCALE_TARGET)
+            if raw[offset : offset + len(source_pattern)] != source_pattern:
+                raise PatchError("Hollow Knight Mono HUD scale FSM changed")
+            raw[offset : offset + len(source_pattern)] = target_pattern
+            hud_fsm.set_raw_data(bytes(raw))
+            changed = True
+        elif fsm_state != "patched":
+            raise PatchError("Hollow Knight Mono HUD scale FSM is ambiguous")
+
+        inventory = _path_readers(
+            resources, "Transform", "_GameCameras/HudCamera/Inventory"
+        )[0]
+        tree = inventory.read_typetree()
+        inventory_state = _mono_inventory_layout_state(tree)
+        if inventory_state == "original":
+            tree["m_LocalPosition"]["x"] = INVENTORY_SOURCE_POSITION[0]
+            tree["m_LocalPosition"]["y"] = INVENTORY_SOURCE_POSITION[1]
+            tree["m_LocalScale"]["x"] = 1.0
+            tree["m_LocalScale"]["y"] = 1.0
+            inventory.save_typetree(tree)
+            changed = True
+        elif inventory_state != "patched":
+            raise PatchError("Hollow Knight Mono inventory layout changed")
+
+        for name in INVENTORY_CHILDREN:
+            reader = _path_readers(
+                resources,
+                "Transform",
+                f"_GameCameras/HudCamera/Inventory/{name}",
+            )[0]
+            tree = reader.read_typetree()
+            child_state = _mono_inventory_child_state(tree)
+            if child_state == "original":
+                tree["m_LocalScale"]["x"] = INVENTORY_CHILD_SCALE_TARGET
+                tree["m_LocalScale"]["y"] = INVENTORY_CHILD_SCALE_TARGET
+                reader.save_typetree(tree)
+                changed = True
+            elif child_state != "patched":
+                raise PatchError(f"Hollow Knight Mono inventory pane {name} changed")
 
         for name in MONO_TOUCH_BUTTONS:
             reader = _path_readers(
@@ -914,14 +1292,10 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
                 f"_InControlManager/TouchControls/{name}",
             )[0]
             tree = reader.read_typetree()
-            if (
-                _near(tree["m_AnchorMin"]["y"], 0.5)
-                and _near(tree["m_AnchorMax"]["y"], 0.5)
-                and _near(tree["m_AnchoredPosition"]["y"], 125.0)
-            ):
+            if _mono_touch_layout_state(tree) == "original":
                 tree["m_AnchorMin"]["y"] = 1.0
                 tree["m_AnchorMax"]["y"] = 1.0
-                tree["m_AnchoredPosition"]["y"] = 125.0 - REFERENCE_UI_HALF_HEIGHT
+                tree["m_AnchoredPosition"]["y"] = MONO_TOUCH_TARGET_POSITION_Y
                 reader.save_typetree(tree)
                 changed = True
 
