@@ -193,6 +193,12 @@ def test_mono_hud_layout_migrates_original_and_first_release() -> None:
         hk.MONO_HUD_SCALE_V2,
     )
     fitted_inventory_release = _hud_trees(
+        hk.MONO_HUD_ORTHO_V4,
+        hk.MONO_HUD_V4_CANVAS_X,
+        hk.MONO_HUD_V4_CANVAS_Y,
+        hk.MONO_HUD_SCALE_V4,
+    )
+    prior_camera_release = _hud_trees(
         hk.HUD_ORTHO_TARGET,
         hk.MONO_HUD_V3_CANVAS_X,
         hk.MONO_HUD_V3_CANVAS_Y,
@@ -202,6 +208,7 @@ def test_mono_hud_layout_migrates_original_and_first_release() -> None:
     assert hk._mono_hud_layout_state(*source) == "original"
     assert hk._mono_hud_layout_state(*first_release) == "original"
     assert hk._mono_hud_layout_state(*enlarged_release) == "original"
+    assert hk._mono_hud_layout_state(*prior_camera_release) == "original"
     assert hk._mono_hud_layout_state(*fitted_inventory_release) == "original"
     assert hk._mono_hud_layout_state(*final) == "patched"
 
@@ -222,6 +229,8 @@ def test_mono_hud_fsm_scale_is_unique_and_length_preserving() -> None:
     assert len(source) == len(patched)
 
     assert hk._mono_hud_fsm_state(prefix + patched)[0] == "patched"
+    prior_release = hk._hud_fsm_scale_pattern(hk.MONO_HUD_SCALE_V4)
+    assert hk._mono_hud_fsm_state(prefix + prior_release)[0] == "original"
     assert hk._mono_hud_fsm_state(prefix + source + source)[0] == "ambiguous"
 
 
@@ -247,8 +256,8 @@ def test_mono_inventory_root_migrates_prior_scaled_releases() -> None:
         },
     }
 
-    assert hk._mono_inventory_layout_state(source) == "patched"
-    assert hk._mono_inventory_layout_state(patched) == "original"
+    assert hk._mono_inventory_layout_state(source) == "original"
+    assert hk._mono_inventory_layout_state(patched) == "patched"
 
     first_release = {
         "m_LocalPosition": {
@@ -262,7 +271,21 @@ def test_mono_inventory_root_migrates_prior_scaled_releases() -> None:
             "z": 1.0,
         },
     }
-    assert hk._mono_inventory_layout_state(first_release) == "original"
+    assert hk._mono_inventory_layout_state(first_release) == "patched"
+
+    second_release = {
+        "m_LocalPosition": {
+            "x": hk.INVENTORY_V2_POSITION[0],
+            "y": hk.INVENTORY_V2_POSITION[1],
+            "z": 40.4,
+        },
+        "m_LocalScale": {
+            "x": hk.INVENTORY_SCALE_V2,
+            "y": hk.INVENTORY_SCALE_V2,
+            "z": 1.0,
+        },
+    }
+    assert hk._mono_inventory_layout_state(second_release) == "original"
 
 def test_mono_inventory_panes_use_uniform_fit_without_stretching() -> None:
     source = {
@@ -282,6 +305,35 @@ def test_mono_inventory_panes_use_uniform_fit_without_stretching() -> None:
     assert hk._mono_inventory_child_state(source) == "original"
     assert hk._mono_inventory_child_state(patched) == "patched"
     assert patched["m_LocalScale"]["x"] == patched["m_LocalScale"]["y"]
+
+
+def test_mono_runtime_inventory_body_uses_uniform_scale() -> None:
+    class FakeAssembly:
+        def field_token(self, type_name, field_name):
+            return {"gc": 1, "shouldEnablePause": 2, "ih": 3}[field_name]
+
+        def method_token(self, type_name, method_name):
+            return {"MoveMenuToHUDCamera": 4, "AllowPause": 5}[method_name]
+
+        def member_token(self, type_name, method_name, signature):
+            return {
+                "Find": 6,
+                "get_transform": 7,
+                ".ctor": 8,
+                "set_localScale": 9,
+                "set_localPosition": 10,
+            }[method_name]
+
+        def user_string_token(self, value):
+            assert value == "Inventory"
+            return 11
+
+    body = hk._managed_inventory_runtime_body(FakeAssembly())
+    scale = struct.pack("<f", hk.INVENTORY_RUNTIME_SCALE)
+    assert body.count(b"\x22" + scale) == 2
+    assert body.count(b"\x22" + struct.pack("<f", 1.0)) == 1
+    for value in hk.INVENTORY_RUNTIME_POSITION:
+        assert b"\x22" + struct.pack("<f", value) in body
 
 
 def test_mono_touch_layout_migrates_first_release_to_real_top_edge() -> None:

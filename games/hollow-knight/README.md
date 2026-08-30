@@ -41,7 +41,11 @@ runtime files; the filename and displayed version are not used as selectors.
   the gameplay HUD at the physical top edge, and moves utility touch controls
   to the real top edge. Its dedicated HUD camera is widened enough to contain
   the complete 16:9 inventory composition; the gameplay HUD is compensatingly
-  scaled so health and soul retain their intended physical size.
+  scaled so health and soul retain their intended physical size. Because the
+  port restores the inventory hierarchy when the menu opens, a semantic CIL
+  hook uniformly fits and centers that hierarchy after the reset. This keeps
+  every inventory page, border, cursor, and transition in the same coordinate
+  system without horizontal stretching.
 
 For the Mono port, the original already uses Unity's expanding canvas mode and
 a full-screen gameplay surface. That alone is not the finished 4:3 result: its
@@ -54,11 +58,14 @@ inventory. Current releases recognize and migrate each of those states. The
 migration also patches the unique PlayMaker `Come In` scale action that
 otherwise restores the gameplay HUD after scene load.
 
-This Mono port extracts bundled Unity data into private app storage on first
+This Mono port extracts bundled Unity data into app-specific storage on first
 run. Android's replace-install can preserve that older extracted copy when an
-APK with the same version is installed over it. Back up any wanted saves, then
-uninstall the existing Mono port before testing a newly patched revision. A
-clean install ensures the revised HUD and inventory assets are actually loaded.
+APK with the same version is installed over it. On at least one tested device,
+ordinary uninstall also left the package's external `Android/data` and
+`Android/obb` directories behind. Back up any wanted saves, use Android's app
+info screen to **clear storage while the app is still installed**, then
+uninstall it before testing a newly patched revision. A genuinely clean install
+ensures the revised HUD and inventory assets are loaded.
 
 Because the Mono APK is large, extraction and its single structure-preserving
 Unity bundle rewrite can take several minutes and temporarily require multiple

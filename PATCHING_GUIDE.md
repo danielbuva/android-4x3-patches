@@ -211,11 +211,13 @@ adb install -r --no-streaming "/path/to/Game-4x3.apk"
 ```
 
 The Hollow Knight 1.3.0.0 Mono port is a special case: it extracts its large
-Unity bundle into private app storage on first run. A replace-install of another
-APK with the same version can keep loading that older extracted copy. Back up
-any saves you want, uninstall the existing Mono port, and install the new APK
-cleanly when testing a revised Hollow Knight patch. This does not apply to the
-earlier IL2CPP Hollow Knight port.
+Unity bundle into app-specific storage on first run. A replace-install of
+another APK with the same version can keep loading that older extracted copy.
+On some devices, uninstall alone can also leave its external package folder
+behind. Back up any saves you want, open Android's app info page, choose
+**Storage & cache → Clear storage while the app is still installed**, then
+uninstall it and install the new APK cleanly. This does not apply to the earlier
+IL2CPP Hollow Knight port.
 
 If Android reports a signature conflict, do **not** immediately uninstall the old app. First back up any saves you care about. Once that is done, remove the old differently signed installation through Android and install the patched APK again. Whether cloud saves restore depends on the game and the account you use.
 
@@ -240,7 +242,7 @@ The patcher preserves cloud saves, Play Games, billing, purchases, and unrelated
 | `unsupported` or `ambiguous` | Your APK build has changed a required target. It is not safe to patch with this release. |
 | The same APK is supported on one computer but not another | Update both checkouts with `git pull`, then reinstall `requirements.txt`. Compatibility detection itself is platform-independent. |
 | Android rejects installation | The installed app has a different signing key. Back up saves before replacing it. |
-| A revised Hollow Knight 1.3.0.0 APK still shows the old HUD | The Mono port cached its extracted Unity bundle. Back up saves, uninstall that installation, then install the revised APK cleanly. |
+| A revised Hollow Knight 1.3.0.0 APK still shows the old HUD or inventory | The Mono port cached its extracted Unity bundle. Back up saves, clear the app's storage from Android app info **before** uninstalling, then install the revised APK cleanly. |
 | Baba Is You is still cut off | This is the documented experimental limitation. |
 | Advent Neon shows unfinished room edges or framing | Its initial 4:3 pass is structurally verified but still requires device-side visual iteration. |
 

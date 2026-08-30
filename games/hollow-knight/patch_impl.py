@@ -24,7 +24,11 @@ HUD_ORTHO_TARGET = HUD_ORTHO_SOURCE * SOURCE_ASPECT / TARGET_ASPECT
 # runtime. Give the dedicated HUD camera enough horizontal room for that prefab,
 # then compensate the gameplay HUD scale below. This does not affect the world
 # camera or gameplay framing.
-MONO_HUD_ORTHO_TARGET = HUD_ORTHO_TARGET * SOURCE_ASPECT / TARGET_ASPECT
+MONO_HUD_ORTHO_V4 = HUD_ORTHO_TARGET * SOURCE_ASPECT / TARGET_ASPECT
+# The central frame fit at V4, but peripheral pane artwork still crossed the
+# physical sides. An additional HUD-camera-only margin contains those pieces.
+MONO_INVENTORY_EXTRA_FIT = 1.25
+MONO_HUD_ORTHO_TARGET = MONO_HUD_ORTHO_V4 * MONO_INVENTORY_EXTRA_FIT
 HUD_CANVAS_SOURCE_X = -8.710000038146973
 HUD_CANVAS_SOURCE_Y = 6.6
 IL2CPP_HUD_CANVAS_TARGET_Y = HUD_CANVAS_SOURCE_Y + HUD_ORTHO_TARGET - HUD_ORTHO_SOURCE
@@ -39,19 +43,31 @@ MONO_HUD_V2_CANVAS_Y = MONO_HUD_V1_CANVAS_Y + 1.1
 # the left-side gameplay HUD; right-side mobile controls live on another canvas.
 MONO_HUD_V3_CANVAS_X = HUD_CANVAS_SOURCE_X + 0.8
 MONO_HUD_V3_CANVAS_Y = 10.8
-MONO_HUD_CANVAS_TARGET_X = MONO_HUD_V3_CANVAS_X * SOURCE_ASPECT / TARGET_ASPECT
-MONO_HUD_CANVAS_TARGET_Y = MONO_HUD_V3_CANVAS_Y * SOURCE_ASPECT / TARGET_ASPECT
+MONO_HUD_V4_CANVAS_X = MONO_HUD_V3_CANVAS_X * SOURCE_ASPECT / TARGET_ASPECT
+MONO_HUD_V4_CANVAS_Y = MONO_HUD_V3_CANVAS_Y * SOURCE_ASPECT / TARGET_ASPECT
+MONO_HUD_CANVAS_TARGET_X = MONO_HUD_V4_CANVAS_X * MONO_INVENTORY_EXTRA_FIT
+MONO_HUD_CANVAS_TARGET_Y = MONO_HUD_V4_CANVAS_Y * MONO_INVENTORY_EXTRA_FIT
 MONO_HUD_SCALE_SOURCE = 1.0
 MONO_HUD_SCALE_V2 = SOURCE_ASPECT / TARGET_ASPECT
-MONO_HUD_SCALE_TARGET = SOURCE_ASPECT / TARGET_ASPECT
+MONO_HUD_SCALE_V4 = SOURCE_ASPECT / TARGET_ASPECT
+MONO_HUD_SCALE_TARGET = MONO_HUD_SCALE_V4 * MONO_INVENTORY_EXTRA_FIT
 UI_REFERENCE_HEIGHT_SOURCE = 1080.0
 UI_REFERENCE_HEIGHT_TARGET = 1440.0
 HUD_FSM_SCALE_TIME = 0.15000000596046448
 INVENTORY_SCALE_V1 = TARGET_ASPECT / SOURCE_ASPECT
-INVENTORY_SCALE_TARGET = INVENTORY_SCALE_V1 * TARGET_ASPECT / SOURCE_ASPECT
+INVENTORY_SCALE_V2 = INVENTORY_SCALE_V1 * TARGET_ASPECT / SOURCE_ASPECT
+# The inventory is reparented beneath the animated HUD canvas at runtime, so
+# enlarging that canvas to preserve the gameplay HUD also enlarges the menu and
+# cancels the wider HUD-camera fit. Counter-scale the inventory root by the
+# 16:9-to-4:3 ratio. Unlike scaling individual panes, this keeps every page,
+# border, cursor, and transition in one uniform coordinate system.
+INVENTORY_SCALE_TARGET = INVENTORY_SCALE_V1
 INVENTORY_SOURCE_POSITION = (-4.050000190734863, 7.550000190734863)
 INVENTORY_V1_POSITION = tuple(
     value * INVENTORY_SCALE_V1 for value in INVENTORY_SOURCE_POSITION
+)
+INVENTORY_V2_POSITION = tuple(
+    value * INVENTORY_SCALE_V2 for value in INVENTORY_SOURCE_POSITION
 )
 INVENTORY_TARGET_POSITION = tuple(
     value * INVENTORY_SCALE_TARGET for value in INVENTORY_SOURCE_POSITION
@@ -66,6 +82,12 @@ INVENTORY_CHILDREN = (
     "Map",
     "Map Key",
 )
+INVENTORY_RUNTIME_SCALE = TARGET_ASPECT / SOURCE_ASPECT
+# Runtime reparenting places the uniformly fitted 16:9 composition high and a
+# little left on a 4:3 display. These local coordinates center its remaining
+# letterboxed height while preserving the uniform (non-stretched) fit.
+INVENTORY_RUNTIME_POSITION = (-2.90, 5.44, 40.4)
+INVENTORY_RUNTIME_TARGET_NAME = "Mono runtime inventory fit"
 CAMERA_LIMIT_SOURCE = 8.300000190734863
 CAMERA_LIMIT_TARGET = CAMERA_LIMIT_SOURCE * SOURCE_ASPECT / TARGET_ASPECT
 REFERENCE_UI_HEIGHT = 1080.0
@@ -405,7 +427,12 @@ def _mono_hud_layout_state(camera_tree: dict[str, Any], canvas_tree: dict[str, A
     recognized = (
         any(
             _near(camera_size, value)
-            for value in (HUD_ORTHO_SOURCE, HUD_ORTHO_TARGET, MONO_HUD_ORTHO_TARGET)
+            for value in (
+                HUD_ORTHO_SOURCE,
+                HUD_ORTHO_TARGET,
+                MONO_HUD_ORTHO_V4,
+                MONO_HUD_ORTHO_TARGET,
+            )
         )
         and any(
             _near(position["x"], value)
@@ -413,6 +440,7 @@ def _mono_hud_layout_state(camera_tree: dict[str, Any], canvas_tree: dict[str, A
                 HUD_CANVAS_SOURCE_X,
                 MONO_HUD_V2_CANVAS_X,
                 MONO_HUD_V3_CANVAS_X,
+                MONO_HUD_V4_CANVAS_X,
                 MONO_HUD_CANVAS_TARGET_X,
             )
         )
@@ -423,6 +451,7 @@ def _mono_hud_layout_state(camera_tree: dict[str, Any], canvas_tree: dict[str, A
                 MONO_HUD_V1_CANVAS_Y,
                 MONO_HUD_V2_CANVAS_Y,
                 MONO_HUD_V3_CANVAS_Y,
+                MONO_HUD_V4_CANVAS_Y,
                 MONO_HUD_CANVAS_TARGET_Y,
             )
         )
@@ -432,6 +461,7 @@ def _mono_hud_layout_state(camera_tree: dict[str, Any], canvas_tree: dict[str, A
                 for value in (
                     MONO_HUD_SCALE_SOURCE,
                     MONO_HUD_SCALE_V2,
+                    MONO_HUD_SCALE_V4,
                     MONO_HUD_SCALE_TARGET,
                 )
             )
@@ -466,7 +496,11 @@ def _mono_hud_fsm_state(raw: bytes | bytearray) -> tuple[str, int | None]:
 
     if raw.count(b"Slide Out") != 1 or raw.count(b"iTweenScaleTo") < 1:
         return "unsupported", None
-    prior = _byte_offsets(raw, _hud_fsm_scale_pattern(MONO_HUD_SCALE_SOURCE))
+    prior = [
+        offset
+        for value in (MONO_HUD_SCALE_SOURCE, MONO_HUD_SCALE_V4)
+        for offset in _byte_offsets(raw, _hud_fsm_scale_pattern(value))
+    ]
     target = _byte_offsets(raw, _hud_fsm_scale_pattern(MONO_HUD_SCALE_TARGET))
     if len(prior) == 1 and not target:
         return "original", prior[0]
@@ -487,6 +521,7 @@ def _mono_inventory_layout_state(tree: dict[str, Any]) -> str:
                 for value in (
                     INVENTORY_SOURCE_POSITION[index],
                     INVENTORY_V1_POSITION[index],
+                    INVENTORY_V2_POSITION[index],
                     INVENTORY_TARGET_POSITION[index],
                 )
             )
@@ -495,7 +530,12 @@ def _mono_inventory_layout_state(tree: dict[str, Any]) -> str:
         and all(
             any(
                 _near(scale[axis], value)
-                for value in (1.0, INVENTORY_SCALE_V1, INVENTORY_SCALE_TARGET)
+                for value in (
+                    1.0,
+                    INVENTORY_SCALE_V1,
+                    INVENTORY_SCALE_V2,
+                    INVENTORY_SCALE_TARGET,
+                )
             )
             for axis in ("x", "y")
         )
@@ -504,10 +544,10 @@ def _mono_inventory_layout_state(tree: dict[str, Any]) -> str:
     if not recognized:
         return "unsupported"
     final = (
-        _near(position["x"], INVENTORY_SOURCE_POSITION[0])
-        and _near(position["y"], INVENTORY_SOURCE_POSITION[1])
-        and _near(scale["x"], 1.0)
-        and _near(scale["y"], 1.0)
+        _near(position["x"], INVENTORY_TARGET_POSITION[0])
+        and _near(position["y"], INVENTORY_TARGET_POSITION[1])
+        and _near(scale["x"], INVENTORY_SCALE_TARGET)
+        and _near(scale["y"], INVENTORY_SCALE_TARGET)
     )
     return "patched" if final else "original"
 
@@ -891,6 +931,185 @@ class _ManagedAssembly:
         row = table.rows[row_id - 1]
         return f"{self.field_owners.get(id(row), '?')}::{row.Name}"
 
+    def method_row(self, type_name: str, method_name: str) -> Any:
+        matches = []
+        for type_def in self.pe.net.mdtables.TypeDef:
+            if _metadata_type_name(type_def) != type_name:
+                continue
+            matches.extend(
+                index.row
+                for index in type_def.MethodList
+                if str(index.row.Name) == method_name and index.row.Rva
+            )
+        if len(matches) != 1:
+            raise PatchError(
+                f"managed method {type_name}.{method_name} is not unique"
+            )
+        return matches[0]
+
+    def field_token(self, type_name: str, field_name: str) -> int:
+        matches = [
+            index
+            for index, row in enumerate(self.pe.net.mdtables.Field, 1)
+            if self.field_owners.get(id(row)) == type_name
+            and str(row.Name) == field_name
+        ]
+        if len(matches) != 1:
+            raise PatchError(f"managed field {type_name}.{field_name} is not unique")
+        return 0x04000000 | matches[0]
+
+    def method_token(self, type_name: str, method_name: str) -> int:
+        table = self.pe.net.mdtables.MethodDef
+        matches = [
+            index
+            for index, row in enumerate(table, 1)
+            if self.method_owners.get(id(row)) == type_name
+            and str(row.Name) == method_name
+        ]
+        if len(matches) != 1:
+            raise PatchError(f"managed method {type_name}.{method_name} is not unique")
+        return 0x06000000 | matches[0]
+
+    def member_token(self, type_name: str, method_name: str, signature: bytes) -> int:
+        matches = []
+        for index, row in enumerate(self.pe.net.mdtables.MemberRef, 1):
+            owner = getattr(getattr(row.Class, "row", None), "TypeName", None)
+            namespace = getattr(getattr(row.Class, "row", None), "TypeNamespace", "")
+            full_name = f"{namespace}.{owner}".strip(".") if owner else ""
+            if (
+                full_name == type_name
+                and str(row.Name) == method_name
+                and bytes(row.Signature.value) == signature
+            ):
+                matches.append(index)
+        if len(matches) != 1:
+            raise PatchError(f"managed member {type_name}.{method_name} is not unique")
+        return 0x0A000000 | matches[0]
+
+    def user_string_token(self, value: str) -> int:
+        encoded = value.encode("utf-16le") + b"\0"
+        if len(encoded) >= 0x80:
+            raise PatchError("managed inventory string encoding changed")
+        needle = bytes((len(encoded),)) + encoded
+        heap = self.pe.net.user_strings.__dict__["__data__"]
+        offsets = _byte_offsets(heap, needle)
+        if len(offsets) != 1:
+            raise PatchError("managed Inventory user string is not unique")
+        return 0x70000000 | offsets[0]
+
+
+def _managed_inventory_runtime_state(assembly: _ManagedAssembly) -> str:
+    """Recognize the original or injected HUDCamera menu-open method."""
+
+    methods = assembly.methods("HUDCamera", "MoveMenuToHUDCamera")
+    if len(methods) != 1:
+        return "ambiguous" if len(methods) > 1 else "unsupported"
+    _offset, body = methods[0]
+    instructions = body.instructions
+    scale_literals = [
+        instruction
+        for instruction in instructions
+        if instruction.opcode.name == "ldc.r4"
+        and _near(instruction.operand, INVENTORY_RUNTIME_SCALE)
+    ]
+    has_find = any(
+        instruction.opcode.name == "call"
+        and getattr(instruction.operand, "value", None)
+        == assembly.member_token(
+            "UnityEngine.GameObject", "Find", bytes.fromhex("000112590e")
+        )
+        for instruction in instructions
+    )
+    if len(scale_literals) == 2 and has_find:
+        return "patched"
+    if not scale_literals and not has_find and len(instructions) == 13:
+        return "original"
+    return "unsupported"
+
+
+def _managed_inventory_runtime_body(assembly: _ManagedAssembly) -> bytes:
+    """Build a replacement method that fits Inventory after its runtime reset."""
+
+    def token(opcode: int, value: int) -> bytes:
+        return bytes((opcode,)) + struct.pack("<I", value)
+
+    gc_field = assembly.field_token("HUDCamera", "gc")
+    pause_field = assembly.field_token("HUDCamera", "shouldEnablePause")
+    input_field = assembly.field_token("HUDCamera", "ih")
+    move_menu = assembly.method_token("GameCameras", "MoveMenuToHUDCamera")
+    allow_pause = assembly.method_token("InputHandler", "AllowPause")
+    find = assembly.member_token(
+        "UnityEngine.GameObject", "Find", bytes.fromhex("000112590e")
+    )
+    get_transform = assembly.member_token(
+        "UnityEngine.GameObject", "get_transform", bytes.fromhex("20001280d5")
+    )
+    vector_ctor = assembly.member_token(
+        "UnityEngine.Vector3", ".ctor", bytes.fromhex("2003010c0c0c")
+    )
+    set_scale = assembly.member_token(
+        "UnityEngine.Transform", "set_localScale", bytes.fromhex("2001011175")
+    )
+    set_position = assembly.member_token(
+        "UnityEngine.Transform", "set_localPosition", bytes.fromhex("2001011175")
+    )
+    inventory_string = assembly.user_string_token("Inventory")
+
+    code = bytearray()
+    code += b"\x02" + token(0x7B, gc_field) + token(0x6F, move_menu)
+    code += token(0x72, inventory_string) + token(0x28, find)
+    code += token(0x6F, get_transform)
+    code += b"\x22" + struct.pack("<f", INVENTORY_RUNTIME_SCALE)
+    code += b"\x22" + struct.pack("<f", INVENTORY_RUNTIME_SCALE)
+    code += b"\x22" + struct.pack("<f", 1.0)
+    code += token(0x73, vector_ctor) + token(0x6F, set_scale)
+    code += token(0x72, inventory_string) + token(0x28, find)
+    code += token(0x6F, get_transform)
+    for value in INVENTORY_RUNTIME_POSITION:
+        code += b"\x22" + struct.pack("<f", value)
+    code += token(0x73, vector_ctor) + token(0x6F, set_position)
+    code += b"\x02" + token(0x7B, pause_field)
+    branch_offset = len(code)
+    code += b"\x2c\x00"
+    code += b"\x02" + token(0x7B, input_field) + token(0x6F, allow_pause)
+    code += b"\x02\x16" + token(0x7D, pause_field)
+    return_offset = len(code)
+    code += b"\x2a"
+    distance = return_offset - (branch_offset + 2)
+    if not -128 <= distance <= 127:
+        raise PatchError("managed inventory branch is out of range")
+    code[branch_offset + 1] = distance & 0xFF
+    return struct.pack("<HHII", 0x3003, 4, len(code), 0) + bytes(code)
+
+
+def _inject_managed_inventory_runtime(
+    assembly: _ManagedAssembly, data: bytearray
+) -> None:
+    body = _managed_inventory_runtime_body(assembly)
+    text_sections = [
+        section
+        for section in assembly.pe.sections
+        if section.Name.rstrip(b"\0") == b".text"
+    ]
+    if len(text_sections) != 1:
+        raise PatchError("managed .text section is not unique")
+    section = text_sections[0]
+    section_end = section.PointerToRawData + section.SizeOfRawData
+    padding_start = section_end
+    while padding_start > section.PointerToRawData and data[padding_start - 1] == 0:
+        padding_start -= 1
+    destination = (padding_start + 3) & ~3
+    if destination + len(body) > section_end:
+        raise PatchError("managed assembly has no safe trailing code space")
+    if any(data[destination : destination + len(body)]):
+        raise PatchError("managed trailing code space is not empty")
+    data[destination : destination + len(body)] = body
+
+    method = assembly.method_row("HUDCamera", "MoveMenuToHUDCamera")
+    rva_offset = method.struct.get_field_absolute_offset("Rva")
+    new_rva = section.VirtualAddress + destination - section.PointerToRawData
+    struct.pack_into("<I", data, rva_offset, new_rva)
+
 
 def _managed_float_target(
     assembly: _ManagedAssembly,
@@ -1024,6 +1243,12 @@ def _managed_targets(
         )
         targets.append(target)
         edits.extend(method_edits)
+    targets.append(
+        _target(
+            INVENTORY_RUNTIME_TARGET_NAME,
+            _managed_inventory_runtime_state(assembly),
+        )
+    )
     return targets, edits
 
 
@@ -1213,7 +1438,7 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
         tree = camera.read_typetree()
         if any(
             _near(tree["orthographic size"], value)
-            for value in (HUD_ORTHO_SOURCE, HUD_ORTHO_TARGET)
+            for value in (HUD_ORTHO_SOURCE, HUD_ORTHO_TARGET, MONO_HUD_ORTHO_V4)
         ):
             tree["orthographic size"] = MONO_HUD_ORTHO_TARGET
             camera.save_typetree(tree)
@@ -1244,9 +1469,20 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
         fsm_state, offset, hud_fsm = recognized_fsms[0]
         if fsm_state == "original" and offset is not None:
             raw = bytearray(hud_fsm.get_raw_data())
-            source_pattern = _hud_fsm_scale_pattern(MONO_HUD_SCALE_SOURCE)
+            source_patterns = (
+                _hud_fsm_scale_pattern(MONO_HUD_SCALE_SOURCE),
+                _hud_fsm_scale_pattern(MONO_HUD_SCALE_V4),
+            )
             target_pattern = _hud_fsm_scale_pattern(MONO_HUD_SCALE_TARGET)
-            if raw[offset : offset + len(source_pattern)] != source_pattern:
+            source_pattern = next(
+                (
+                    pattern
+                    for pattern in source_patterns
+                    if raw[offset : offset + len(pattern)] == pattern
+                ),
+                None,
+            )
+            if source_pattern is None:
                 raise PatchError("Hollow Knight Mono HUD scale FSM changed")
             raw[offset : offset + len(source_pattern)] = target_pattern
             hud_fsm.set_raw_data(bytes(raw))
@@ -1260,10 +1496,10 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
         tree = inventory.read_typetree()
         inventory_state = _mono_inventory_layout_state(tree)
         if inventory_state == "original":
-            tree["m_LocalPosition"]["x"] = INVENTORY_SOURCE_POSITION[0]
-            tree["m_LocalPosition"]["y"] = INVENTORY_SOURCE_POSITION[1]
-            tree["m_LocalScale"]["x"] = 1.0
-            tree["m_LocalScale"]["y"] = 1.0
+            tree["m_LocalPosition"]["x"] = INVENTORY_TARGET_POSITION[0]
+            tree["m_LocalPosition"]["y"] = INVENTORY_TARGET_POSITION[1]
+            tree["m_LocalScale"]["x"] = INVENTORY_SCALE_TARGET
+            tree["m_LocalScale"]["y"] = INVENTORY_SCALE_TARGET
             inventory.save_typetree(tree)
             changed = True
         elif inventory_state != "patched":
@@ -1310,7 +1546,12 @@ def _patch_managed(source: Path, destination: Path) -> bool:
     targets, edits = _managed_targets(source)
     if any(target["state"] in ("unsupported", "ambiguous") for target in targets):
         raise PatchError("Hollow Knight Mono managed targets changed during patching")
-    if not edits:
+    runtime_state = next(
+        target["state"]
+        for target in targets
+        if target["name"] == INVENTORY_RUNTIME_TARGET_NAME
+    )
+    if not edits and runtime_state == "patched":
         return False
     data = bytearray(source.read_bytes())
     for offset, original, replacement in edits:
@@ -1319,6 +1560,8 @@ def _patch_managed(source: Path, destination: Path) -> bool:
         if len(original) != len(replacement):
             raise PatchError("Hollow Knight Mono managed edit is not length preserving")
         data[offset : offset + len(original)] = replacement
+    if runtime_state == "original":
+        _inject_managed_inventory_runtime(_ManagedAssembly(source), data)
     destination.write_bytes(data)
     return True
 
