@@ -134,6 +134,47 @@ def test_managed_full_viewport_branch_has_guarded_original_and_patched_states() 
     assert edits == []
 
 
+def test_managed_overscan_crop_has_guarded_original_and_patched_states() -> None:
+    source_body = SimpleNamespace(
+        instructions=[
+            _instruction("ldc.r4", 12, 1.0, b"\x22", struct.pack("<f", 1.0)),
+            _instruction("ldarg.0", 17, None, b"\x02"),
+            _instruction(
+                "ldfld",
+                18,
+                "ForceCameraAspect::scaleAdjust",
+                b"\x7b",
+                b"\x01\x00\x00\x04",
+            ),
+            _instruction("add", 23, None, b"\x58"),
+            _instruction("stloc.1", 24, None, b"\x0b"),
+        ]
+    )
+    source = _FakeAssembly(
+        {("ForceCameraAspect", "AutoScaleViewport"): [(100, source_body)]}
+    )
+    target, edits = hk._managed_overscan_target(source)
+    assert target["state"] == "original"
+    assert edits == [(117, b"\x02\x7b\x01\x00\x00\x04\x58", b"\x00" * 7)]
+
+    patched_body = SimpleNamespace(
+        instructions=[
+            source_body.instructions[0],
+            *[
+                _instruction("nop", 17 + offset, None, b"\x00")
+                for offset in range(7)
+            ],
+            _instruction("stloc.1", 24, None, b"\x0b"),
+        ]
+    )
+    patched = _FakeAssembly(
+        {("ForceCameraAspect", "AutoScaleViewport"): [(100, patched_body)]}
+    )
+    target, edits = hk._managed_overscan_target(patched)
+    assert target["state"] == "patched"
+    assert edits == []
+
+
 def test_disclaimer_scaler_requires_expand_mode_structure() -> None:
     raw = bytearray(32)
     raw.extend(struct.pack("<iffffif", 1, 100.0, 1.0, 1920.0, 1080.0, 1, 0.0))
@@ -204,13 +245,52 @@ def test_mono_hud_layout_migrates_original_and_first_release() -> None:
         hk.MONO_HUD_V3_CANVAS_Y,
         hk.MONO_HUD_SCALE_SOURCE,
     )
+    prior_centered_inventory_release = _hud_trees(
+        hk.MONO_HUD_ORTHO_V5,
+        hk.MONO_HUD_V5_CANVAS_X,
+        hk.MONO_HUD_V5_CANVAS_Y,
+        hk.MONO_HUD_SCALE_V5,
+    )
 
     assert hk._mono_hud_layout_state(*source) == "original"
     assert hk._mono_hud_layout_state(*first_release) == "original"
     assert hk._mono_hud_layout_state(*enlarged_release) == "original"
     assert hk._mono_hud_layout_state(*prior_camera_release) == "original"
     assert hk._mono_hud_layout_state(*fitted_inventory_release) == "original"
+    assert hk._mono_hud_layout_state(*prior_centered_inventory_release) == "original"
     assert hk._mono_hud_layout_state(*final) == "patched"
+
+
+def test_mono_world_camera_uses_native_4x3_render_resolution() -> None:
+    source = bytearray(220)
+    source[40:48] = struct.pack("<ii", *hk.WORLD_NATIVE_RESOLUTION_SOURCE)
+    source[72:76] = struct.pack("<f", hk.WORLD_ZOOM_SOURCE)
+    source[76:80] = b"\x01\x00\x00\x00"
+    source[80:88] = struct.pack("<ff", *hk.WORLD_FORCE_RESOLUTION_SOURCE)
+    state, edits = hk._mono_world_resolution_state(source)
+    assert state == "original"
+    assert len(edits) == 3
+    for offset, original, replacement in edits:
+        assert source[offset : offset + len(original)] == original
+        source[offset : offset + len(original)] = replacement
+    assert hk._mono_world_resolution_state(source)[0] == "patched"
+
+
+def test_mono_world_camera_migrates_prior_4x3_resolution_without_zoom() -> None:
+    source = bytearray(220)
+    source[40:48] = struct.pack("<ii", *hk.WORLD_NATIVE_RESOLUTION_TARGET)
+    source[72:76] = struct.pack("<f", hk.WORLD_ZOOM_SOURCE)
+    source[76:80] = b"\x01\x00\x00\x00"
+    source[80:88] = struct.pack("<ff", *hk.WORLD_FORCE_RESOLUTION_TARGET)
+    state, edits = hk._mono_world_resolution_state(source)
+    assert state == "original"
+    assert edits == [
+        (
+            72,
+            struct.pack("<f", hk.WORLD_ZOOM_SOURCE),
+            struct.pack("<f", hk.WORLD_ZOOM_TARGET),
+        )
+    ]
 
 
 def test_mono_hud_layout_rejects_unrecognized_safe_area_values() -> None:
@@ -219,7 +299,7 @@ def test_mono_hud_layout_rejects_unrecognized_safe_area_values() -> None:
 
 
 def test_mono_hud_fsm_scale_is_unique_and_length_preserving() -> None:
-    source = hk._hud_fsm_scale_pattern(hk.MONO_HUD_SCALE_SOURCE)
+    source = hk._hud_fsm_scale_pattern(hk.MONO_HUD_SCALE_V5)
     patched = hk._hud_fsm_scale_pattern(hk.MONO_HUD_SCALE_TARGET)
     prefix = b"Slide Out\0HutongGames.PlayMaker.Actions.iTweenScaleTo\0"
 
@@ -256,7 +336,7 @@ def test_mono_inventory_root_migrates_prior_scaled_releases() -> None:
         },
     }
 
-    assert hk._mono_inventory_layout_state(source) == "original"
+    assert hk._mono_inventory_layout_state(source) == "patched"
     assert hk._mono_inventory_layout_state(patched) == "patched"
 
     first_release = {
@@ -271,7 +351,7 @@ def test_mono_inventory_root_migrates_prior_scaled_releases() -> None:
             "z": 1.0,
         },
     }
-    assert hk._mono_inventory_layout_state(first_release) == "patched"
+    assert hk._mono_inventory_layout_state(first_release) == "original"
 
     second_release = {
         "m_LocalPosition": {
@@ -307,6 +387,47 @@ def test_mono_inventory_panes_use_uniform_fit_without_stretching() -> None:
     assert patched["m_LocalScale"]["x"] == patched["m_LocalScale"]["y"]
 
 
+def test_mono_inventory_backdrops_counter_root_fit() -> None:
+    for name, (source_x, source_y) in hk.INVENTORY_BACKDROPS.items():
+        source = {
+            "m_LocalPosition": {
+                "x": 0.0,
+                "y": hk.INVENTORY_BACKDROP_SOURCE_Y[name],
+                "z": 0.0,
+            },
+            "m_LocalScale": {"x": source_x, "y": source_y, "z": 1.0}
+        }
+        patched = {
+            "m_LocalPosition": {
+                "x": 0.0,
+                "y": (
+                    hk.INVENTORY_BACKDROP_SOURCE_Y[name]
+                    + hk.INVENTORY_BACKDROP_Y_OFFSET
+                ),
+                "z": 0.0,
+            },
+            "m_LocalScale": {
+                "x": source_x * hk.INVENTORY_BACKDROP_SCALE_MULTIPLIER,
+                "y": source_y * hk.INVENTORY_BACKDROP_SCALE_MULTIPLIER,
+                "z": 1.0,
+            }
+        }
+        prior_full_frame = {
+            "m_LocalPosition": patched["m_LocalPosition"],
+            "m_LocalScale": {
+                "x": source_x * hk.INVENTORY_BACKDROP_SCALE_MULTIPLIER_V1,
+                "y": source_y * hk.INVENTORY_BACKDROP_SCALE_MULTIPLIER_V1,
+                "z": 1.0,
+            },
+        }
+        assert hk._mono_inventory_backdrop_state(source, name) == "original"
+        assert (
+            hk._mono_inventory_backdrop_state(prior_full_frame, name)
+            == "original"
+        )
+        assert hk._mono_inventory_backdrop_state(patched, name) == "patched"
+
+
 def test_mono_runtime_inventory_body_uses_uniform_scale() -> None:
     class FakeAssembly:
         def field_token(self, type_name, field_name):
@@ -330,8 +451,7 @@ def test_mono_runtime_inventory_body_uses_uniform_scale() -> None:
 
     body = hk._managed_inventory_runtime_body(FakeAssembly())
     scale = struct.pack("<f", hk.INVENTORY_RUNTIME_SCALE)
-    assert body.count(b"\x22" + scale) == 2
-    assert body.count(b"\x22" + struct.pack("<f", 1.0)) == 1
+    assert body.count(b"\x22" + scale) == 3
     for value in hk.INVENTORY_RUNTIME_POSITION:
         assert b"\x22" + struct.pack("<f", value) in body
 

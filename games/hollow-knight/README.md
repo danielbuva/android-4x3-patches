@@ -35,17 +35,18 @@ runtime files; the filename and displayed version are not used as selectors.
 - The 1.3.0.0 Mono port stores camera behavior in `Assembly-CSharp.dll` and
   packages its Unity scenes into one large `data.unity3d` bundle. Its patch
   resolves named managed types and methods, changes only their recognized CIL
-  operands, forces the full viewport, expands every associated vertical
-  camera-bound calculation, fits the disclaimer text, changes both the
-  serialized and runtime UI reference from 1920×1080 to 1920×1440, repositions
-  the gameplay HUD at the physical top edge, and moves utility touch controls
-  to the real top edge. Its dedicated HUD camera is widened enough to contain
-  the complete 16:9 inventory composition; the gameplay HUD is compensatingly
-  scaled so health and soul retain their intended physical size. Because the
-  port restores the inventory hierarchy when the menu opens, a semantic CIL
-  hook uniformly fits and centers that hierarchy after the reset. This keeps
-  every inventory page, border, cursor, and transition in the same coordinate
-  system without horizontal stretching.
+  operands, removes the hidden overscan crop, expands every associated vertical
+  camera-bound calculation, and changes the serialized world camera from
+  1920×1080 to 1920×1440 with a guarded 0.75 zoom factor. That combination
+  preserves the original horizontal world span while revealing the additional
+  top and bottom area. The patch also fits the disclaimer text, changes the
+  runtime UI reference to 1920×1440, places the health HUD at the physical
+  top-left edge, and moves utility touch controls to the real top edge. Because
+  the port restores the inventory hierarchy when the menu opens, a semantic CIL
+  hook restores its uniform scale and centered position after that reset. Its
+  translucent backdrop is enlarged separately to cover the complete 4:3 frame.
+  Every inventory page, border, cursor, and transition therefore remains in one
+  coordinate system without horizontal or vertical stretching.
 
 For the Mono port, the original already uses Unity's expanding canvas mode and
 a full-screen gameplay surface. That alone is not the finished 4:3 result: its
@@ -53,19 +54,19 @@ camera limits and auxiliary aspect handlers remain 16:9, and its HUD is visibly
 clipped. The Mono patch preserves the existing horizontal game span, exposes
 the additional vertical area consistently, and corrects those UI assumptions.
 Earlier public Mono patches expanded the HUD camera but retained the original
-inset, and one intermediate release enlarged the HUD without fitting the
-inventory. Current releases recognize and migrate each of those states. The
-migration also patches the unique PlayMaker `Come In` scale action that
-otherwise restores the gameplay HUD after scene load.
+inset, and intermediate releases compensated for the cropped world projection
+by shrinking or moving the HUD and inventory. Current releases recognize and
+migrate those states to the true 4:3 camera, stable health-HUD position,
+centered inventory, and full-frame backdrop. The migration also recognizes the
+unique PlayMaker `Come In` scale action used when the gameplay HUD returns.
 
-This Mono port extracts bundled Unity data into app-specific storage on first
-run. Android's replace-install can preserve that older extracted copy when an
-APK with the same version is installed over it. On at least one tested device,
-ordinary uninstall also left the package's external `Android/data` and
-`Android/obb` directories behind. Back up any wanted saves, use Android's app
-info screen to **clear storage while the app is still installed**, then
-uninstall it before testing a newly patched revision. A genuinely clean install
-ensures the revised HUD and inventory assets are loaded.
+This Mono port may extract bundled Unity data into app-specific storage. A
+replace-install worked in place on the primary test device, but a port build or
+Android version that retains an older extracted copy can make a new patch look
+unchanged. If that happens, back up any wanted saves, use Android's app-info
+screen to **clear storage while the app is still installed**, then uninstall
+and install the newly patched APK. On some devices, uninstall alone can leave
+external `Android/data` or `Android/obb` files behind.
 
 Because the Mono APK is large, extraction and its single structure-preserving
 Unity bundle rewrite can take several minutes and temporarily require multiple

@@ -28,7 +28,11 @@ MONO_HUD_ORTHO_V4 = HUD_ORTHO_TARGET * SOURCE_ASPECT / TARGET_ASPECT
 # The central frame fit at V4, but peripheral pane artwork still crossed the
 # physical sides. An additional HUD-camera-only margin contains those pieces.
 MONO_INVENTORY_EXTRA_FIT = 1.25
-MONO_HUD_ORTHO_TARGET = MONO_HUD_ORTHO_V4 * MONO_INVENTORY_EXTRA_FIT
+MONO_HUD_ORTHO_V5 = MONO_HUD_ORTHO_V4 * MONO_INVENTORY_EXTRA_FIT
+# The active Mono gameplay scene has its own HUD-camera copy. Expanding that
+# camera once to 4:3 preserves the original horizontal span; the older V4/V5
+# values zoomed the HUD out a second time to compensate for the inventory.
+MONO_HUD_ORTHO_TARGET = HUD_ORTHO_TARGET
 HUD_CANVAS_SOURCE_X = -8.710000038146973
 HUD_CANVAS_SOURCE_Y = 6.6
 IL2CPP_HUD_CANVAS_TARGET_Y = HUD_CANVAS_SOURCE_Y + HUD_ORTHO_TARGET - HUD_ORTHO_SOURCE
@@ -45,12 +49,18 @@ MONO_HUD_V3_CANVAS_X = HUD_CANVAS_SOURCE_X + 0.8
 MONO_HUD_V3_CANVAS_Y = 10.8
 MONO_HUD_V4_CANVAS_X = MONO_HUD_V3_CANVAS_X * SOURCE_ASPECT / TARGET_ASPECT
 MONO_HUD_V4_CANVAS_Y = MONO_HUD_V3_CANVAS_Y * SOURCE_ASPECT / TARGET_ASPECT
-MONO_HUD_CANVAS_TARGET_X = MONO_HUD_V4_CANVAS_X * MONO_INVENTORY_EXTRA_FIT
-MONO_HUD_CANVAS_TARGET_Y = MONO_HUD_V4_CANVAS_Y * MONO_INVENTORY_EXTRA_FIT
+MONO_HUD_V5_CANVAS_X = MONO_HUD_V4_CANVAS_X * MONO_INVENTORY_EXTRA_FIT
+MONO_HUD_V5_CANVAS_Y = MONO_HUD_V4_CANVAS_Y * MONO_INVENTORY_EXTRA_FIT
+# After the world camera is fitted independently, return the health HUD to the
+# inset position used by the last visually verified layout. This keeps the soul
+# vessel, masks, and geo counter clear of every physical display edge.
+MONO_HUD_CANVAS_TARGET_X = -9.25
+MONO_HUD_CANVAS_TARGET_Y = 9.7
 MONO_HUD_SCALE_SOURCE = 1.0
 MONO_HUD_SCALE_V2 = SOURCE_ASPECT / TARGET_ASPECT
 MONO_HUD_SCALE_V4 = SOURCE_ASPECT / TARGET_ASPECT
-MONO_HUD_SCALE_TARGET = MONO_HUD_SCALE_V4 * MONO_INVENTORY_EXTRA_FIT
+MONO_HUD_SCALE_V5 = MONO_HUD_SCALE_V4 * MONO_INVENTORY_EXTRA_FIT
+MONO_HUD_SCALE_TARGET = MONO_HUD_SCALE_SOURCE
 UI_REFERENCE_HEIGHT_SOURCE = 1080.0
 UI_REFERENCE_HEIGHT_TARGET = 1440.0
 HUD_FSM_SCALE_TIME = 0.15000000596046448
@@ -61,7 +71,7 @@ INVENTORY_SCALE_V2 = INVENTORY_SCALE_V1 * TARGET_ASPECT / SOURCE_ASPECT
 # cancels the wider HUD-camera fit. Counter-scale the inventory root by the
 # 16:9-to-4:3 ratio. Unlike scaling individual panes, this keeps every page,
 # border, cursor, and transition in one uniform coordinate system.
-INVENTORY_SCALE_TARGET = INVENTORY_SCALE_V1
+INVENTORY_SCALE_TARGET = 1.0
 INVENTORY_SOURCE_POSITION = (-4.050000190734863, 7.550000190734863)
 INVENTORY_V1_POSITION = tuple(
     value * INVENTORY_SCALE_V1 for value in INVENTORY_SOURCE_POSITION
@@ -82,12 +92,40 @@ INVENTORY_CHILDREN = (
     "Map",
     "Map Key",
 )
-INVENTORY_RUNTIME_SCALE = TARGET_ASPECT / SOURCE_ASPECT
-# Runtime reparenting places the uniformly fitted 16:9 composition high and a
-# little left on a 4:3 display. These local coordinates center its remaining
-# letterboxed height while preserving the uniform (non-stretched) fit.
-INVENTORY_RUNTIME_POSITION = (-2.90, 5.44, 40.4)
+INVENTORY_RUNTIME_SCALE_V1 = TARGET_ASPECT / SOURCE_ASPECT
+INVENTORY_RUNTIME_SCALE = 1.0
+# The previous runtime correction was compensating for the old, cropped camera
+# projection. With the world and HUD cameras now fitted independently, the
+# prefab's original X/Y values center it exactly on the 4:3 display.
+INVENTORY_RUNTIME_POSITION_V1 = (-2.90, 5.44, 40.4)
+INVENTORY_RUNTIME_POSITION = (
+    INVENTORY_SOURCE_POSITION[0],
+    INVENTORY_SOURCE_POSITION[1],
+    40.4,
+)
 INVENTORY_RUNTIME_TARGET_NAME = "Mono runtime inventory fit"
+INVENTORY_BACKDROPS = {
+    "backboard": (321.67681884765625, 196.77186584472656),
+}
+INVENTORY_BACKDROP_SCALE_MULTIPLIER_V1 = 3.25
+# The first full-frame backdrop left a narrow uncovered strip at the physical
+# top edge. A small uniform enlargement closes it without changing opacity or
+# the inventory artwork's independent centered transform.
+INVENTORY_BACKDROP_SCALE_MULTIPLIER = 3.4
+INVENTORY_BACKDROP_SOURCE_Y = {
+    "backboard": -7.519999980926514,
+}
+INVENTORY_BACKDROP_Y_OFFSET = 1.0
+WORLD_CAMERA_ASSETS = ("resources.assets", "level2")
+WORLD_NATIVE_RESOLUTION_SOURCE = (1920, 1080)
+WORLD_NATIVE_RESOLUTION_TARGET = (1920, 1440)
+WORLD_FORCE_RESOLUTION_SOURCE = (1280.0, 720.0)
+WORLD_FORCE_RESOLUTION_TARGET = (1280.0, 960.0)
+WORLD_ZOOM_SOURCE = 1.0
+# The Mono port otherwise preserves its 16:9 height and discards one quarter
+# of the horizontal world on a 4:3 display. A 0.75 zoom factor preserves the
+# original 29.2-unit width and exposes the corresponding extra vertical area.
+WORLD_ZOOM_TARGET = TARGET_ASPECT / SOURCE_ASPECT
 CAMERA_LIMIT_SOURCE = 8.300000190734863
 CAMERA_LIMIT_TARGET = CAMERA_LIMIT_SOURCE * SOURCE_ASPECT / TARGET_ASPECT
 REFERENCE_UI_HEIGHT = 1080.0
@@ -431,6 +469,7 @@ def _mono_hud_layout_state(camera_tree: dict[str, Any], canvas_tree: dict[str, A
                 HUD_ORTHO_SOURCE,
                 HUD_ORTHO_TARGET,
                 MONO_HUD_ORTHO_V4,
+                MONO_HUD_ORTHO_V5,
                 MONO_HUD_ORTHO_TARGET,
             )
         )
@@ -441,6 +480,7 @@ def _mono_hud_layout_state(camera_tree: dict[str, Any], canvas_tree: dict[str, A
                 MONO_HUD_V2_CANVAS_X,
                 MONO_HUD_V3_CANVAS_X,
                 MONO_HUD_V4_CANVAS_X,
+                MONO_HUD_V5_CANVAS_X,
                 MONO_HUD_CANVAS_TARGET_X,
             )
         )
@@ -452,6 +492,7 @@ def _mono_hud_layout_state(camera_tree: dict[str, Any], canvas_tree: dict[str, A
                 MONO_HUD_V2_CANVAS_Y,
                 MONO_HUD_V3_CANVAS_Y,
                 MONO_HUD_V4_CANVAS_Y,
+                MONO_HUD_V5_CANVAS_Y,
                 MONO_HUD_CANVAS_TARGET_Y,
             )
         )
@@ -462,6 +503,7 @@ def _mono_hud_layout_state(camera_tree: dict[str, Any], canvas_tree: dict[str, A
                     MONO_HUD_SCALE_SOURCE,
                     MONO_HUD_SCALE_V2,
                     MONO_HUD_SCALE_V4,
+                    MONO_HUD_SCALE_V5,
                     MONO_HUD_SCALE_TARGET,
                 )
             )
@@ -498,7 +540,7 @@ def _mono_hud_fsm_state(raw: bytes | bytearray) -> tuple[str, int | None]:
         return "unsupported", None
     prior = [
         offset
-        for value in (MONO_HUD_SCALE_SOURCE, MONO_HUD_SCALE_V4)
+        for value in (MONO_HUD_SCALE_V4, MONO_HUD_SCALE_V5)
         for offset in _byte_offsets(raw, _hud_fsm_scale_pattern(value))
     ]
     target = _byte_offsets(raw, _hud_fsm_scale_pattern(MONO_HUD_SCALE_TARGET))
@@ -567,6 +609,33 @@ def _mono_inventory_child_state(tree: dict[str, Any]) -> str:
     return "unsupported"
 
 
+def _mono_inventory_backdrop_state(tree: dict[str, Any], name: str) -> str:
+    source_x, source_y = INVENTORY_BACKDROPS[name]
+    scale = tree["m_LocalScale"]
+    target_x = source_x * INVENTORY_BACKDROP_SCALE_MULTIPLIER
+    target_y = source_y * INVENTORY_BACKDROP_SCALE_MULTIPLIER
+    position_y = float(tree["m_LocalPosition"]["y"])
+    source_position_y = INVENTORY_BACKDROP_SOURCE_Y[name]
+    target_scale = _near(scale["x"], target_x) and _near(scale["y"], target_y)
+    source_scale = _near(scale["x"], source_x) and _near(scale["y"], source_y)
+    prior_scale = _near(
+        scale["x"], source_x / INVENTORY_RUNTIME_SCALE
+    ) and _near(scale["y"], source_y / INVENTORY_RUNTIME_SCALE)
+    prior_full_frame_scale = _near(
+        scale["x"], source_x * INVENTORY_BACKDROP_SCALE_MULTIPLIER_V1
+    ) and _near(
+        scale["y"], source_y * INVENTORY_BACKDROP_SCALE_MULTIPLIER_V1
+    )
+    target_position_y = source_position_y + INVENTORY_BACKDROP_Y_OFFSET
+    if target_scale and _near(position_y, target_position_y):
+        return "patched"
+    if (source_scale or prior_scale) and _near(position_y, source_position_y):
+        return "original"
+    if prior_full_frame_scale and _near(position_y, target_position_y):
+        return "original"
+    return "unsupported"
+
+
 def _mono_touch_layout_state(tree: dict[str, Any]) -> str:
     min_y = float(tree["m_AnchorMin"]["y"])
     max_y = float(tree["m_AnchorMax"]["y"])
@@ -590,12 +659,83 @@ def _mono_touch_layout_state(tree: dict[str, Any]) -> str:
     return "unsupported"
 
 
+def _mono_world_resolution_state(
+    raw: bytes | bytearray,
+) -> tuple[str, list[tuple[int, bytes, bytes]]]:
+    pairs = (
+        (
+            struct.pack("<ii", *WORLD_NATIVE_RESOLUTION_SOURCE),
+            struct.pack("<ii", *WORLD_NATIVE_RESOLUTION_TARGET),
+        ),
+        (
+            struct.pack("<ff", *WORLD_FORCE_RESOLUTION_SOURCE),
+            struct.pack("<ff", *WORLD_FORCE_RESOLUTION_TARGET),
+        ),
+    )
+    edits: list[tuple[int, bytes, bytes]] = []
+    states: set[str] = set()
+    force_offset: int | None = None
+    for source, target in pairs:
+        source_offsets = _byte_offsets(raw, source)
+        target_offsets = _byte_offsets(raw, target)
+        if len(source_offsets) == 1 and not target_offsets:
+            states.add("original")
+            edits.append((source_offsets[0], source, target))
+            if source == pairs[1][0]:
+                force_offset = source_offsets[0]
+        elif len(target_offsets) == 1 and not source_offsets:
+            states.add("patched")
+            if target == pairs[1][1]:
+                force_offset = target_offsets[0]
+        else:
+            return "unsupported", []
+
+    # `zoomFactor` is serialized immediately before the enabled forced-output
+    # flag and its Vector2 resolution. Anchor the field to that verified
+    # structure instead of searching for the common 1.0 float globally.
+    if force_offset is None or force_offset < 8:
+        return "unsupported", []
+    zoom_offset = force_offset - 8
+    if raw[zoom_offset + 4 : force_offset] != b"\x01\x00\x00\x00":
+        return "unsupported", []
+    source_zoom = struct.pack("<f", WORLD_ZOOM_SOURCE)
+    target_zoom = struct.pack("<f", WORLD_ZOOM_TARGET)
+    current_zoom = bytes(raw[zoom_offset : zoom_offset + 4])
+    if current_zoom == source_zoom:
+        states.add("original")
+        edits.append((zoom_offset, source_zoom, target_zoom))
+    elif current_zoom == target_zoom:
+        states.add("patched")
+    else:
+        return "unsupported", []
+    return ("patched" if states == {"patched"} else "original"), edits
+
+
 def _mono_unity_targets(path: Path) -> list[dict[str, Any]]:
     UnityPy = _unitypy()
     environment = UnityPy.load(str(path))
     bundle = _bundle_file(environment)
     targets: list[dict[str, Any]] = []
     try:
+        for asset_name in WORLD_CAMERA_ASSETS:
+            assets_file = bundle.files.get(asset_name)
+            target_name = f"Mono 4:3 world render resolution: {asset_name}"
+            if assets_file is None:
+                targets.append(_target(target_name, "unsupported"))
+                continue
+            cameras = _script_component_reader(
+                bundle,
+                assets_file,
+                "_GameCameras/CameraParent/tk2dCamera",
+                "tk2dCamera",
+            )
+            if len(cameras) != 1:
+                state = "ambiguous" if len(cameras) > 1 else "unsupported"
+                targets.append(_target(target_name, state, matches=len(cameras)))
+                continue
+            state, _ = _mono_world_resolution_state(cameras[0].get_raw_data())
+            targets.append(_target(target_name, state))
+
         level0 = bundle.files.get("level0")
         if level0 is None:
             targets.append(_target("Mono intro: disclaimer scene", "unsupported"))
@@ -746,6 +886,22 @@ def _mono_unity_targets(path: Path) -> list[dict[str, Any]]:
                 tree = readers[0].read_typetree()
                 targets.append(_target(target_name, _mono_inventory_child_state(tree)))
 
+            for name in sorted(INVENTORY_BACKDROPS):
+                path_name = f"_GameCameras/HudCamera/Inventory/Border/{name}"
+                readers = _path_readers(resources, "Transform", path_name)
+                target_name = f"Mono full-screen inventory backdrop: {name}"
+                if len(readers) != 1:
+                    state = "ambiguous" if len(readers) > 1 else "unsupported"
+                    targets.append(_target(target_name, state, matches=len(readers)))
+                    continue
+                tree = readers[0].read_typetree()
+                targets.append(
+                    _target(
+                        target_name,
+                        _mono_inventory_backdrop_state(tree, name),
+                    )
+                )
+
             for name in sorted(MONO_TOUCH_BUTTONS):
                 path_name = f"_InControlManager/TouchControls/{name}"
                 readers = _path_readers(resources, "RectTransform", path_name)
@@ -767,6 +923,72 @@ def _mono_unity_targets(path: Path) -> list[dict[str, Any]]:
                         anchor_max_y=max_y,
                         anchored_position_y=position_y,
                     )
+                )
+
+        level2 = bundle.files.get("level2")
+        if level2 is None:
+            targets.append(_target("Mono active-scene HUD", "unsupported"))
+        else:
+            cameras = _path_readers(level2, "Camera", "_GameCameras/HudCamera")
+            canvases = _path_readers(
+                level2, "Transform", "_GameCameras/HudCamera/Hud Canvas"
+            )
+            if len(cameras) != 1 or len(canvases) != 1:
+                state = (
+                    "ambiguous"
+                    if len(cameras) > 1 or len(canvases) > 1
+                    else "unsupported"
+                )
+                targets.append(_target("Mono active-scene HUD", state))
+            else:
+                targets.append(
+                    _target(
+                        "Mono active-scene HUD",
+                        _mono_hud_layout_state(
+                            cameras[0].read_typetree(), canvases[0].read_typetree()
+                        ),
+                    )
+                )
+
+            hud_fsms = _script_component_reader(
+                bundle, level2, "_GameCameras/HudCamera/Hud Canvas", "PlayMakerFSM"
+            )
+            recognized_fsms = [
+                (state, reader)
+                for reader in hud_fsms
+                for state, _offset in [_mono_hud_fsm_state(reader.get_raw_data())]
+                if state != "unsupported"
+            ]
+            state = (
+                recognized_fsms[0][0]
+                if len(recognized_fsms) == 1
+                else ("ambiguous" if len(recognized_fsms) > 1 else "unsupported")
+            )
+            targets.append(_target("Mono active-scene HUD animation", state))
+
+            inventories = _path_readers(
+                level2, "Transform", "_GameCameras/HudCamera/Inventory"
+            )
+            state = (
+                _mono_inventory_layout_state(inventories[0].read_typetree())
+                if len(inventories) == 1
+                else ("ambiguous" if len(inventories) > 1 else "unsupported")
+            )
+            targets.append(_target("Mono active-scene inventory fit", state))
+
+            for name in sorted(INVENTORY_BACKDROPS):
+                readers = _path_readers(
+                    level2,
+                    "Transform",
+                    f"_GameCameras/HudCamera/Inventory/Border/{name}",
+                )
+                state = (
+                    _mono_inventory_backdrop_state(readers[0].read_typetree(), name)
+                    if len(readers) == 1
+                    else ("ambiguous" if len(readers) > 1 else "unsupported")
+                )
+                targets.append(
+                    _target(f"Mono active-scene inventory backdrop: {name}", state)
                 )
     finally:
         _close_unity(bundle, environment)
@@ -1006,11 +1228,17 @@ def _managed_inventory_runtime_state(assembly: _ManagedAssembly) -> str:
         return "ambiguous" if len(methods) > 1 else "unsupported"
     _offset, body = methods[0]
     instructions = body.instructions
-    scale_literals = [
+    target_literals = [
         instruction
         for instruction in instructions
         if instruction.opcode.name == "ldc.r4"
         and _near(instruction.operand, INVENTORY_RUNTIME_SCALE)
+    ]
+    prior_literals = [
+        instruction
+        for instruction in instructions
+        if instruction.opcode.name == "ldc.r4"
+        and _near(instruction.operand, INVENTORY_RUNTIME_SCALE_V1)
     ]
     has_find = any(
         instruction.opcode.name == "call"
@@ -1020,9 +1248,34 @@ def _managed_inventory_runtime_state(assembly: _ManagedAssembly) -> str:
         )
         for instruction in instructions
     )
-    if len(scale_literals) == 2 and has_find:
+    float_literals = [
+        float(instruction.operand)
+        for instruction in instructions
+        if instruction.opcode.name == "ldc.r4"
+    ]
+
+    def has_position(position: tuple[float, float, float]) -> bool:
+        return all(
+            any(_near(value, expected) for value in float_literals)
+            for expected in position
+        )
+
+    # X, Y, and Z are all one in the final uniform-scale vector.
+    if (
+        len(target_literals) == 3
+        and not prior_literals
+        and has_find
+        and has_position(INVENTORY_RUNTIME_POSITION)
+    ):
         return "patched"
-    if not scale_literals and not has_find and len(instructions) == 13:
+    if (len(prior_literals) == 2 and has_find) or (
+        len(target_literals) == 3
+        and not prior_literals
+        and has_find
+        and has_position(INVENTORY_RUNTIME_POSITION_V1)
+    ):
+        return "original"
+    if not target_literals and not prior_literals and not has_find and len(instructions) == 13:
         return "original"
     return "unsupported"
 
@@ -1068,6 +1321,7 @@ def _managed_inventory_runtime_body(assembly: _ManagedAssembly) -> bytes:
     for value in INVENTORY_RUNTIME_POSITION:
         code += b"\x22" + struct.pack("<f", value)
     code += token(0x73, vector_ctor) + token(0x6F, set_position)
+
     code += b"\x02" + token(0x7B, pause_field)
     branch_offset = len(code)
     code += b"\x2c\x00"
@@ -1196,6 +1450,68 @@ def _managed_black_bars_target(
     return _target("Mono full viewport branch", "unsupported"), []
 
 
+def _managed_overscan_target(
+    assembly: _ManagedAssembly,
+) -> tuple[dict[str, Any], list[tuple[int, bytes, bytes]]]:
+    """Neutralize the port's hidden edge crop while preserving UI overscan math."""
+
+    methods = assembly.methods("ForceCameraAspect", "AutoScaleViewport")
+    if len(methods) != 1:
+        state = "ambiguous" if len(methods) > 1 else "unsupported"
+        return _target("Mono full-frame overscan", state, methods=len(methods)), []
+    method_offset, body = methods[0]
+    instructions = body.instructions
+
+    field_indices = [
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opcode.name == "ldfld"
+        and assembly.field_name(instruction.operand) == "ForceCameraAspect::scaleAdjust"
+    ]
+    if len(field_indices) == 1:
+        index = field_indices[0]
+        if index < 2 or index + 1 >= len(instructions):
+            return _target("Mono full-frame overscan", "unsupported"), []
+        load_this = instructions[index - 1]
+        one = instructions[index - 2]
+        add = instructions[index + 1]
+        if (
+            load_this.opcode.name != "ldarg.0"
+            or one.opcode.name != "ldc.r4"
+            or not _near(one.operand, 1.0)
+            or add.opcode.name != "add"
+        ):
+            return _target("Mono full-frame overscan", "unsupported"), []
+        start = method_offset + load_this.offset
+        original = b"".join(
+            bytes(item.opcode_bytes) + bytes(item.operand_bytes)
+            for item in (load_this, instructions[index], add)
+        )
+        if len(original) != 7:
+            return _target("Mono full-frame overscan", "unsupported"), []
+        return _target("Mono full-frame overscan", "original"), [
+            (start, original, b"\x00" * len(original))
+        ]
+
+    # In the patched method the 7-byte `this.scaleAdjust +` expression is a
+    # run of nops between `ldc.r4 1` and the local store. Require that exact
+    # structure so an unrelated run of padding can never pass verification.
+    for index, instruction in enumerate(instructions):
+        if (
+            instruction.opcode.name != "ldc.r4"
+            or not _near(instruction.operand, 1.0)
+            or index + 8 >= len(instructions)
+        ):
+            continue
+        padding = instructions[index + 1 : index + 8]
+        store = instructions[index + 8]
+        if all(item.opcode.name == "nop" for item in padding) and store.opcode.name.startswith(
+            "stloc"
+        ):
+            return _target("Mono full-frame overscan", "patched"), []
+    return _target("Mono full-frame overscan", "unsupported"), []
+
+
 def _managed_targets(
     path: Path,
 ) -> tuple[list[dict[str, Any]], list[tuple[int, bytes, bytes]]]:
@@ -1218,6 +1534,9 @@ def _managed_targets(
     branch, branch_edits = _managed_black_bars_target(assembly)
     targets.append(branch)
     edits.extend(branch_edits)
+    overscan, overscan_edits = _managed_overscan_target(assembly)
+    targets.append(overscan)
+    edits.extend(overscan_edits)
     ui_reference, ui_reference_edits = _managed_float_target(
         assembly,
         "GameCameras",
@@ -1400,6 +1719,30 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
     bundle = _bundle_file(environment)
     changed = False
     try:
+        for asset_name in WORLD_CAMERA_ASSETS:
+            assets_file = bundle.files[asset_name]
+            camera = _script_component_reader(
+                bundle,
+                assets_file,
+                "_GameCameras/CameraParent/tk2dCamera",
+                "tk2dCamera",
+            )[0]
+            raw = bytearray(camera.get_raw_data())
+            state, edits = _mono_world_resolution_state(raw)
+            if state == "original":
+                for offset, source_value, target_value in edits:
+                    if raw[offset : offset + len(source_value)] != source_value:
+                        raise PatchError(
+                            f"Hollow Knight Mono world resolution changed in {asset_name}"
+                        )
+                    raw[offset : offset + len(source_value)] = target_value
+                camera.set_raw_data(bytes(raw))
+                changed = True
+            elif state != "patched":
+                raise PatchError(
+                    f"Hollow Knight Mono world resolution changed in {asset_name}"
+                )
+
         level0 = bundle.files["level0"]
         scaler = _script_component_reader(bundle, level0, "Canvas", "CanvasScaler")[0]
         raw = bytearray(scaler.get_raw_data())
@@ -1438,7 +1781,12 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
         tree = camera.read_typetree()
         if any(
             _near(tree["orthographic size"], value)
-            for value in (HUD_ORTHO_SOURCE, HUD_ORTHO_TARGET, MONO_HUD_ORTHO_V4)
+            for value in (
+                HUD_ORTHO_SOURCE,
+                HUD_ORTHO_TARGET,
+                MONO_HUD_ORTHO_V4,
+                MONO_HUD_ORTHO_V5,
+            )
         ):
             tree["orthographic size"] = MONO_HUD_ORTHO_TARGET
             camera.save_typetree(tree)
@@ -1470,8 +1818,8 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
         if fsm_state == "original" and offset is not None:
             raw = bytearray(hud_fsm.get_raw_data())
             source_patterns = (
-                _hud_fsm_scale_pattern(MONO_HUD_SCALE_SOURCE),
                 _hud_fsm_scale_pattern(MONO_HUD_SCALE_V4),
+                _hud_fsm_scale_pattern(MONO_HUD_SCALE_V5),
             )
             target_pattern = _hud_fsm_scale_pattern(MONO_HUD_SCALE_TARGET)
             source_pattern = next(
@@ -1521,6 +1869,30 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
             elif child_state != "patched":
                 raise PatchError(f"Hollow Knight Mono inventory pane {name} changed")
 
+        for name, (source_x, source_y) in INVENTORY_BACKDROPS.items():
+            reader = _path_readers(
+                resources,
+                "Transform",
+                f"_GameCameras/HudCamera/Inventory/Border/{name}",
+            )[0]
+            tree = reader.read_typetree()
+            backdrop_state = _mono_inventory_backdrop_state(tree, name)
+            if backdrop_state == "original":
+                tree["m_LocalScale"]["x"] = (
+                    source_x * INVENTORY_BACKDROP_SCALE_MULTIPLIER
+                )
+                tree["m_LocalScale"]["y"] = (
+                    source_y * INVENTORY_BACKDROP_SCALE_MULTIPLIER
+                )
+                tree["m_LocalPosition"]["y"] = (
+                    INVENTORY_BACKDROP_SOURCE_Y[name]
+                    + INVENTORY_BACKDROP_Y_OFFSET
+                )
+                reader.save_typetree(tree)
+                changed = True
+            elif backdrop_state != "patched":
+                raise PatchError(f"Hollow Knight Mono inventory backdrop {name} changed")
+
         for name in MONO_TOUCH_BUTTONS:
             reader = _path_readers(
                 resources,
@@ -1534,6 +1906,99 @@ def _patch_unity_mono(source: Path, destination: Path) -> bool:
                 tree["m_AnchoredPosition"]["y"] = MONO_TOUCH_TARGET_POSITION_Y
                 reader.save_typetree(tree)
                 changed = True
+
+        level2 = bundle.files["level2"]
+        camera = _path_readers(level2, "Camera", "_GameCameras/HudCamera")[0]
+        canvas = _path_readers(
+            level2, "Transform", "_GameCameras/HudCamera/Hud Canvas"
+        )[0]
+        camera_tree = camera.read_typetree()
+        canvas_tree = canvas.read_typetree()
+        scene_hud_state = _mono_hud_layout_state(camera_tree, canvas_tree)
+        if scene_hud_state == "original":
+            camera_tree["orthographic size"] = MONO_HUD_ORTHO_TARGET
+            canvas_tree["m_LocalPosition"]["x"] = MONO_HUD_CANVAS_TARGET_X
+            canvas_tree["m_LocalPosition"]["y"] = MONO_HUD_CANVAS_TARGET_Y
+            canvas_tree["m_LocalScale"]["x"] = MONO_HUD_SCALE_TARGET
+            canvas_tree["m_LocalScale"]["y"] = MONO_HUD_SCALE_TARGET
+            camera.save_typetree(camera_tree)
+            canvas.save_typetree(canvas_tree)
+            changed = True
+        elif scene_hud_state != "patched":
+            raise PatchError("Hollow Knight Mono active-scene HUD changed")
+
+        hud_fsms = _script_component_reader(
+            bundle, level2, "_GameCameras/HudCamera/Hud Canvas", "PlayMakerFSM"
+        )
+        recognized_fsms = []
+        for reader in hud_fsms:
+            fsm_state, offset = _mono_hud_fsm_state(reader.get_raw_data())
+            if fsm_state != "unsupported":
+                recognized_fsms.append((fsm_state, offset, reader))
+        if len(recognized_fsms) != 1:
+            raise PatchError("Hollow Knight Mono active-scene HUD animation changed")
+        fsm_state, offset, hud_fsm = recognized_fsms[0]
+        if fsm_state == "original" and offset is not None:
+            raw = bytearray(hud_fsm.get_raw_data())
+            source_pattern = next(
+                (
+                    pattern
+                    for pattern in (
+                        _hud_fsm_scale_pattern(MONO_HUD_SCALE_V4),
+                        _hud_fsm_scale_pattern(MONO_HUD_SCALE_V5),
+                    )
+                    if raw[offset : offset + len(pattern)] == pattern
+                ),
+                None,
+            )
+            if source_pattern is None:
+                raise PatchError("Hollow Knight Mono active-scene HUD scale changed")
+            raw[offset : offset + len(source_pattern)] = _hud_fsm_scale_pattern(
+                MONO_HUD_SCALE_TARGET
+            )
+            hud_fsm.set_raw_data(bytes(raw))
+            changed = True
+
+        inventory = _path_readers(
+            level2, "Transform", "_GameCameras/HudCamera/Inventory"
+        )[0]
+        tree = inventory.read_typetree()
+        inventory_state = _mono_inventory_layout_state(tree)
+        if inventory_state == "original":
+            tree["m_LocalPosition"]["x"] = INVENTORY_TARGET_POSITION[0]
+            tree["m_LocalPosition"]["y"] = INVENTORY_TARGET_POSITION[1]
+            tree["m_LocalScale"]["x"] = INVENTORY_SCALE_TARGET
+            tree["m_LocalScale"]["y"] = INVENTORY_SCALE_TARGET
+            inventory.save_typetree(tree)
+            changed = True
+        elif inventory_state != "patched":
+            raise PatchError("Hollow Knight Mono active-scene inventory changed")
+
+        for name, (source_x, source_y) in INVENTORY_BACKDROPS.items():
+            reader = _path_readers(
+                level2,
+                "Transform",
+                f"_GameCameras/HudCamera/Inventory/Border/{name}",
+            )[0]
+            tree = reader.read_typetree()
+            backdrop_state = _mono_inventory_backdrop_state(tree, name)
+            if backdrop_state == "original":
+                tree["m_LocalScale"]["x"] = (
+                    source_x * INVENTORY_BACKDROP_SCALE_MULTIPLIER
+                )
+                tree["m_LocalScale"]["y"] = (
+                    source_y * INVENTORY_BACKDROP_SCALE_MULTIPLIER
+                )
+                tree["m_LocalPosition"]["y"] = (
+                    INVENTORY_BACKDROP_SOURCE_Y[name]
+                    + INVENTORY_BACKDROP_Y_OFFSET
+                )
+                reader.save_typetree(tree)
+                changed = True
+            elif backdrop_state != "patched":
+                raise PatchError(
+                    f"Hollow Knight Mono active-scene inventory backdrop {name} changed"
+                )
 
         if changed:
             destination.write_bytes(bundle.save(packer="original"))
