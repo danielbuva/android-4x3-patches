@@ -70,6 +70,12 @@ def _i4(value: int) -> bytes:
     return b"\x20" + struct.pack("<i", value)
 
 
+def _i4s(value: int) -> bytes:
+    if not -128 <= value <= 127:
+        raise ValueError("short CIL integer is outside the signed-byte range")
+    return b"\x1f" + struct.pack("<b", value)
+
+
 def _r4(value: float) -> bytes:
     return b"\x22" + struct.pack("<f", value)
 
@@ -190,6 +196,81 @@ _REGIONS = (
         _hx("596ff81500060617580a06027b921300"),
         (_Change("options layout slide distance", 0, _r4(495), _r4(360)),),
     ),
+    # The loading gate was authored as a 660x360 panel and scaled 2x, which
+    # covers exactly 1320x720. Keep its horizontal scale while extending only
+    # its vertical scale to the complete 990-line virtual screen.
+    _Region(
+        "LoadingScreen.LoadContent",
+        _hx("027b6d130004176f1e160006027b6d130004"),
+        0xA,
+        _hx("73ea00000a6f0a160006027b6d130004"),
+        (_Change("loading gate full-height scale", 0x5, _r4(2.0), _r4(2.75)),),
+    ),
+    # Both ordinary and boss deaths position the bottom of the spotlight from
+    # a 40-line top inset. The added vertical view moved the body down while
+    # leaving that inset unchanged. A short-integer-safe 127-line inset adds
+    # the missing 87 pixels without changing method size or spotlight width.
+    _Region(
+        "GameOverScreen.LayoutScreenObjects",
+        _hx("027b221300047ef81700046b220000003f5a"),
+        0x2,
+        _hx("027b221300046ff1150006586b73ea00000a"),
+        (_Change("death spotlight vertical reach", 0, _i4s(40), _i4s(127)),),
+    ),
+    _Region(
+        "GameOverBossScreen.LayoutScreenObjects",
+        _hx("027b171300047ef81700046b220000003f5a"),
+        0x2,
+        _hx("027b171300046ff1150006586b73ea00000a"),
+        (_Change("boss-death spotlight vertical reach", 0, _i4s(40), _i4s(127)),),
+    ),
+    # The rune shop is one parent container. Moving that parent from the old
+    # 360-line centre keeps every rune, label, and selector aligned together.
+    _Region(
+        "EnchantressScreen.LoadContent",
+        _hx("0272fb95017073631600067df7120004027bf7120004"),
+        0xA,
+        _hx("73ea00000a6ffa150006027e6b110004"),
+        (_Change("rune-shop vertical center", 0x5, _r4(360), _r4(495)),),
+    ),
+    # These two screen-local mobile overlays duplicate the physical controller
+    # on handhelds and obscure the map/legacy choices. Suppress their draw
+    # calls only; the screens' controller and touch hit-testing code is left
+    # intact.
+    _Region(
+        "LineageScreen.Draw",
+        _hx("027b5b1300040228fd1700066fe7150006"),
+        0x18,
+        _hx("027b561300040228fd1700066fe7150006"),
+        (
+            _Change(
+                "hide lineage touch stick",
+                0x0,
+                _hx("0228720b0006"),
+                b"\0" * 6,
+            ),
+            _Change(
+                "hide lineage touch select button",
+                0x6,
+                _hx("02027b5e130004027b5d13000428710b0006"),
+                b"\0" * 18,
+            ),
+        ),
+    ),
+    _Region(
+        "MapScreen.Draw",
+        _hx("027b7e1300040228fd1700066fe7150006"),
+        0xC,
+        _hx("027b791300040228fd1700066fe7150006"),
+        (
+            _Change(
+                "hide map touch buttons",
+                0x0,
+                _hx("020228fd17000628a30b0006"),
+                b"\0" * 12,
+            ),
+        ),
+    ),
     # Map and teleporter modes share MapScreen. Expand their alpha-map surface
     # from the old 1220x620 inset to the equivalent 1220x890 inset in the
     # 1320x990 virtual screen. MapObj must also allocate the complete 990-line
@@ -247,6 +328,30 @@ _REGIONS = (
         0x5,
         _hx("0b027ba8130004027ba81300046ff015"),
         (_Change("pause layout height", 0, _r4(720), _r4(990)),),
+    ),
+    # RoomObj.SetWidth and SetHeight both recompute the pause sprite scale. In
+    # the vertical term, use the virtual display height rather than the room's
+    # original 720-line geometry. The two identical methods are guarded as one
+    # compound region so neither match can be mistaken for the other.
+    _Region(
+        "RoomObj.SetWidth+SetHeight",
+        _hx("027bee1000046ff01500065b6b"),
+        0x66,
+        _hx("1f1458027bee1000046ff11500065b6b"),
+        (
+            _Change(
+                "pause dimmer height from SetWidth",
+                0x0,
+                _hx("026ff1150006"),
+                _hx("7ef917000400"),
+            ),
+            _Change(
+                "pause dimmer height from SetHeight",
+                0x60,
+                _hx("026ff1150006"),
+                _hx("7ef917000400"),
+            ),
+        ),
     ),
     _Region(
         "TitleScreen.InitializePostProcessingResources",

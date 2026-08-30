@@ -25,6 +25,8 @@
     "initial 4:3 metrics refresh before the first playable room",
     "4:3 splash, title, jointly centered and animated options parchment and rows, and pause layouts",
     "expanded map and teleporter surface on a full 1320x990 render target with correct world-grid mapping",
+    "full-height pause dimmer, loading gate, centered rune shop, and corrected death spotlights",
+    "map and lineage touch-overlay artwork suppression without removing controller input",
     "proportional fixed 16:9 title artwork",
     "recognized porter Telegram credit and developer-promo neutralization when present"
   ],

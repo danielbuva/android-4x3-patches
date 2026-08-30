@@ -32,6 +32,14 @@ assumptions:
   backing render target is the complete 1320×990 screen rather than a
   rect-derived 1320×956 intermediate
 - pause-menu icon layout
+- full-screen pause dimming rather than a 1320×720 dimmer floating in the
+  middle of the taller view
+- the rune shop centered on the 990-line display
+- the animated castle-building gate extended through the full display height
+- death and boss-death spotlights extended down to the fallen character
+- screen-local analog/select/back touch artwork hidden from the map,
+  teleporter, and Choose Your Legacy screens without removing physical
+  controller handling
 - touch-coordinate conversion through the taller virtual screen
 - an initial virtual-screen metrics refresh, so the 1320x990 dimensions reach
   the camera, viewport, overlay, and input systems before the first room is
@@ -116,9 +124,12 @@ XALZ/LZ4 decode and read-back-safe repacking, original/patched/mixed states,
 idempotence, unique-context enforcement, length-preserving managed edits, and
 silent handling of absent or unfamiliar optional branding.
 
-The latest option-row and full-height map-target refinement was recognized
-from both the clean reference and the prior patched state, then rebuilt,
-signed, installed in place on adopted storage, and cold-launched successfully.
+The latest option-row, full-height map-target, loading-gate, rune-shop,
+death-spotlight, pause-dimmer, and screen-local touch-overlay refinements were
+recognized from the clean reference, rebuilt, signed, and installed in place
+on the physical test device. The installation was returned to adopted storage
+after the update. Device-side visual confirmation of these latest refinements
+is still pending.
 
 The audited `1.4.1-r2` structures are the basis for the production targets.
 Full device-side visual verification across gameplay, title, options, pause,
