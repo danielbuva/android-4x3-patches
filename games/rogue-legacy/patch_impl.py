@@ -197,41 +197,55 @@ _REGIONS = (
         (_Change("options layout slide distance", 0, _r4(495), _r4(360)),),
     ),
     # The loading gate was authored as a 660x360 panel and scaled 2x, which
-    # covers exactly 1320x720. Keep its horizontal scale while extending only
-    # its vertical scale to the complete 990-line virtual screen.
+    # covers exactly 1320x720. Scale it proportionally to 2.75x so it reaches
+    # the bottom without vertically warping its gears; the wider result is
+    # clipped by the 1320-pixel viewport.
     _Region(
         "LoadingScreen.LoadContent",
         _hx("027b6d130004176f1e160006027b6d130004"),
         0xA,
         _hx("73ea00000a6f0a160006027b6d130004"),
-        (_Change("loading gate full-height scale", 0x5, _r4(2.0), _r4(2.75)),),
+        (
+            _Change(
+                "loading gate proportional width scale",
+                0x0,
+                _r4(2.0),
+                _r4(2.75),
+            ),
+            _Change("loading gate full-height scale", 0x5, _r4(2.0), _r4(2.75)),
+        ),
     ),
-    # Both ordinary and boss deaths position the bottom of the spotlight from
-    # a 40-line top inset. The added vertical view moved the body down while
-    # leaving that inset unchanged. A short-integer-safe 127-line inset adds
-    # the missing 87 pixels without changing method size or spotlight width.
+    # Both ordinary and boss deaths used ``40 + spotlight.Height`` for the
+    # bottom of the beam. That remains slightly above the corpse in the taller
+    # view. Place the end of the beam at half the live display height instead;
+    # the horizontal center and the spotlight artwork itself remain unchanged.
     _Region(
         "GameOverScreen.LayoutScreenObjects",
         _hx("027b221300047ef81700046b220000003f5a"),
-        0x2,
-        _hx("027b221300046ff1150006586b73ea00000a"),
-        (_Change("death spotlight vertical reach", 0, _i4s(40), _i4s(127)),),
+        0xE,
+        _hx("6b73ea00000a6ffa1500062a"),
+        (
+            _Change(
+                "death spotlight vertical reach",
+                0,
+                _hx("1f28027b221300046ff115000658"),
+                _hx("00007ef91700046b220000003f5a"),
+            ),
+        ),
     ),
     _Region(
         "GameOverBossScreen.LayoutScreenObjects",
         _hx("027b171300047ef81700046b220000003f5a"),
-        0x2,
-        _hx("027b171300046ff1150006586b73ea00000a"),
-        (_Change("boss-death spotlight vertical reach", 0, _i4s(40), _i4s(127)),),
-    ),
-    # The rune shop is one parent container. Moving that parent from the old
-    # 360-line centre keeps every rune, label, and selector aligned together.
-    _Region(
-        "EnchantressScreen.LoadContent",
-        _hx("0272fb95017073631600067df7120004027bf7120004"),
-        0xA,
-        _hx("73ea00000a6ffa150006027e6b110004"),
-        (_Change("rune-shop vertical center", 0x5, _r4(360), _r4(495)),),
+        0xE,
+        _hx("6b73ea00000a6ffa1500062a"),
+        (
+            _Change(
+                "boss-death spotlight vertical reach",
+                0,
+                _hx("1f28027b171300046ff115000658"),
+                _hx("00007ef91700046b220000003f5a"),
+            ),
+        ),
     ),
     # These two screen-local mobile overlays duplicate the physical controller
     # on handhelds and obscure the map/legacy choices. Suppress their draw
@@ -268,6 +282,24 @@ _REGIONS = (
                 0x0,
                 _hx("020228fd17000628a30b0006"),
                 b"\0" * 12,
+            ),
+        ),
+    ),
+    # The small standalone map/rune-looking touch icon is button 9. Its
+    # source layout kept the old 720-line lower-left anchor after gameplay was
+    # expanded. Add the 270 newly visible virtual pixels to this one button's
+    # vertical placement without moving or scaling the other controls.
+    _Region(
+        "AndroidInputMapper.BuildLayout",
+        _hx("1f0906228fc2753d5a097bbf00000a586907"),
+        0x5,
+        _hx("5a097bc000000a586911076911086973f3"),
+        (
+            _Change(
+                "lower-left standalone touch icon bottom anchor",
+                0,
+                _r4(0.08),
+                _r4(0.3527272727),
             ),
         ),
     ),
@@ -329,15 +361,33 @@ _REGIONS = (
         _hx("0b027ba8130004027ba81300046ff015"),
         (_Change("pause layout height", 0, _r4(720), _r4(990)),),
     ),
-    # RoomObj.SetWidth and SetHeight both recompute the pause sprite scale. In
-    # the vertical term, use the virtual display height rather than the room's
-    # original 720-line geometry. The two identical methods are guarded as one
-    # compound region so neither match can be mistaken for the other.
+    # Initialize the room-specific dimmer with a one-source-pixel vertical
+    # anchor. Blank_Sprite is 5x5; after the fullscreen scale this shifts its
+    # top above the old centered 720-line room. The original explicit false
+    # IsReversed assignment is redundant with the field's default value.
+    _Region(
+        "RoomObj..ctor",
+        _hx("027bee100004284a01000a6f22160006"),
+        0x18,
+        _hx("062a062a1a289200000a2a0000"),
+        (
+            _Change(
+                "pause dimmer top anchor",
+                0,
+                _hx("027bee10000422000000006f201600060216283e0800062a"),
+                _hx("027bee10000425176b6f02160006166b6f2016000600002a"),
+            ),
+        ),
+    ),
+    # RoomObj.SetWidth and SetHeight both recompute the pause sprite scale. Use
+    # the live display height, plus enough overscan to cover the opposite edge
+    # after applying the top anchor. The two identical methods are guarded as
+    # one compound region so neither match can be mistaken for the other.
     _Region(
         "RoomObj.SetWidth+SetHeight",
         _hx("027bee1000046ff01500065b6b"),
-        0x66,
-        _hx("1f1458027bee1000046ff11500065b6b"),
+        0x68,
+        _hx("58027bee1000046ff11500065b6b"),
         (
             _Change(
                 "pause dimmer height from SetWidth",
@@ -346,10 +396,22 @@ _REGIONS = (
                 _hx("7ef917000400"),
             ),
             _Change(
+                "pause dimmer vertical overscan from SetWidth",
+                0x6,
+                _i4s(20),
+                _i4s(127),
+            ),
+            _Change(
                 "pause dimmer height from SetHeight",
                 0x60,
                 _hx("026ff1150006"),
                 _hx("7ef917000400"),
+            ),
+            _Change(
+                "pause dimmer vertical overscan from SetHeight",
+                0x66,
+                _i4s(20),
+                _i4s(127),
             ),
         ),
     ),

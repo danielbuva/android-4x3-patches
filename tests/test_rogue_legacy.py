@@ -285,20 +285,38 @@ def test_rogue_legacy_production_targets_are_guarded_and_length_preserving() -> 
     assert changes["options return slide distance"].patched == rogue._r4(495)
     assert changes["options exit slide distance"].original == rogue._r4(-360)
     assert changes["options exit slide distance"].patched == rogue._r4(-495)
+    assert changes["loading gate proportional width scale"].original == rogue._r4(2.0)
+    assert changes["loading gate proportional width scale"].patched == rogue._r4(2.75)
     assert changes["loading gate full-height scale"].original == rogue._r4(2.0)
     assert changes["loading gate full-height scale"].patched == rogue._r4(2.75)
-    assert changes["death spotlight vertical reach"].original == rogue._i4s(40)
-    assert changes["death spotlight vertical reach"].patched == rogue._i4s(127)
-    assert changes["rune-shop vertical center"].original == rogue._r4(360)
-    assert changes["rune-shop vertical center"].patched == rogue._r4(495)
+    assert changes["death spotlight vertical reach"].original == bytes.fromhex(
+        "1f28027b221300046ff115000658"
+    )
+    assert changes["death spotlight vertical reach"].patched == bytes.fromhex(
+        "00007ef91700046b220000003f5a"
+    )
     assert changes["hide lineage touch stick"].patched == b"\0" * 6
     assert changes["hide lineage touch select button"].patched == b"\0" * 18
     assert changes["hide map touch buttons"].patched == b"\0" * 12
+    assert changes["lower-left standalone touch icon bottom anchor"].original == rogue._r4(
+        0.08
+    )
+    assert changes["lower-left standalone touch icon bottom anchor"].patched == rogue._r4(
+        0.3527272727
+    )
+    assert len(changes["pause dimmer top anchor"].original) == 24
+    assert len(changes["pause dimmer top anchor"].patched) == 24
     assert changes["pause dimmer height from SetWidth"].patched == bytes.fromhex(
         "7ef917000400"
     )
     assert changes["pause dimmer height from SetHeight"].patched == bytes.fromhex(
         "7ef917000400"
+    )
+    assert changes["pause dimmer vertical overscan from SetWidth"].original == rogue._i4s(
+        20
+    )
+    assert changes["pause dimmer vertical overscan from SetWidth"].patched == rogue._i4s(
+        127
     )
     exit_rows = changes["preserve centered option rows on exit"]
     assert len(exit_rows.original) == 22
