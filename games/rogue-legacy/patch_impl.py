@@ -196,23 +196,41 @@ _REGIONS = (
         _hx("596ff81500060617580a06027b921300"),
         (_Change("options layout slide distance", 0, _r4(495), _r4(360)),),
     ),
-    # The loading gate was authored as a 660x360 panel and scaled 2x, which
-    # covers exactly 1320x720. Scale it proportionally to 2.75x so it reaches
-    # the bottom without vertically warping its gears; the wider result is
-    # clipped by the 1320-pixel viewport.
+    # The loading gate was authored as a 660x360 panel and scaled 2x. Rebuild
+    # this fixed-size setup sequence so the gate remains ForceDraw, scales
+    # proportionally to 2.75x, starts one scaled height above the viewport, and
+    # receives its -495 X alignment *after* scaling. Applying X last prevents
+    # the container's scale/bounds refresh from restoring its old left edge
+    # when the drop tween completes.
     _Region(
         "LoadingScreen.LoadContent",
-        _hx("027b6d130004"),
-        0xA,
-        _hx("73ea00000a6f0a160006027b6d130004"),
+        _hx("027b671300041a6f35170006"),
+        0x60,
+        _hx("027b6c1300046f2309000602725c230070"),
         (
             _Change(
-                "loading gate proportional width scale",
-                0x0,
-                _r4(2.0),
-                _r4(2.75),
+                "proportional right-aligned loading gate setup",
+                0,
+                _hx(
+                    "027b67130004176f1e160006"
+                    "0272e2cc017073631600067d6d130004"
+                    "027b6d130004176f1e160006"
+                    "027b6d13000422000000402200000040"
+                    "73ea00000a6f0a160006"
+                    "027b6d130004256ff9150006"
+                    "027b6d1300046ff11500066b596ff8150006"
+                ),
+                _hx(
+                    "0272e2cc017073631600067d6d130004"
+                    "027b6d130004176f1e160006"
+                    "027b6d13000425"
+                    "22000030402200003040"
+                    "73ea00000a6f0a160006"
+                    "25220080f7c36ff6150006"
+                    "256ff1150006656b6ff8150006"
+                    "0000000000000000000000000000000000"
+                ),
             ),
-            _Change("loading gate full-height scale", 0x5, _r4(2.0), _r4(2.75)),
         ),
     ),
     # Scale the rotated spotlight along its source X axis, which is the screen
@@ -239,7 +257,7 @@ _REGIONS = (
                     "0272bebe017073091700067d21130004"
                     "02727db1017073091700067d22130004"
                     "027b22130004220000b4426ff2150006"
-                    "027b22130004226666a63f6f06160006"
+                    "027b22130004226666c63f6f06160006"
                     "027b22130004176f1e160006"
                 ),
             ),
@@ -265,35 +283,8 @@ _REGIONS = (
                     "0272bebe017073091700067d15130004"
                     "02727db1017073091700067d17130004"
                     "027b17130004220000b4426ff2150006"
-                    "027b17130004226666a63f6f06160006"
+                    "027b17130004226666c63f6f06160006"
                     "027b17130004176f1e160006"
-                ),
-            ),
-        ),
-    ),
-    # The proportional 2.75x gate is 495 pixels wider than the viewport. Move
-    # its container left by exactly that amount so the right edge stays fixed
-    # and the excess is clipped from the left. Both objects are explicitly
-    # drawn by LoadingScreen.Draw, so their redundant ForceDraw flags provide
-    # the fixed-size instruction space for this source-specific X placement.
-    _Region(
-        "LoadingScreen.LoadContent.RightAlignGate",
-        _hx("027b671300041a6f35170006"),
-        0x38,
-        _hx("73ea00000a6f0a160006027b6d130004256ff9150006"),
-        (
-            _Change(
-                "right-align proportional loading gate",
-                0,
-                _hx(
-                    "027b67130004176f1e160006"
-                    "0272e2cc017073631600067d6d130004"
-                    "027b6d130004176f1e160006"
-                ),
-                _hx(
-                    "0272e2cc017073631600067d6d130004"
-                    "027b6d130004220080f7c36ff6150006"
-                    "0000000000000000"
                 ),
             ),
         ),
@@ -346,16 +337,23 @@ _REGIONS = (
     # Projectile edge markers use a fixed 1320x720 clamp even though the live
     # camera bounds are queried for visibility. The tiny square seen at the
     # old lower-left safe-area corner is one of these markers, not touch button
-    # 9. Keep the width and extend only its bottom clamp to the 990-line view.
+    # 9. Keep the width, extend its bottom clamp to the 990-line view, and dock
+    # non-top edge markers there instead of copying an in-room 720-line Y.
     _Region(
         "ProjectileIconObj.Update",
-        _hx("1200284e01000a027b06100004596b361502"),
-        0x5,
-        _hx("027b06100004596b28f81500062b1d"),
+        _hx("1200284e01000a027b06100004596b"),
+        0x15,
+        _hx("2b1d020228780600066ff9150006036f23150006"),
         (
             _Change(
-                "projectile edge-marker bottom clamp",
+                "dock side projectile marker at bottom edge",
                 0,
+                _hx("3615"),
+                _hx("0000"),
+            ),
+            _Change(
+                "projectile edge-marker bottom clamp",
+                3,
                 _i4(720),
                 _i4(990),
             ),

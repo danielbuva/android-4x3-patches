@@ -34,11 +34,13 @@ assumptions:
 - pause-menu icon layout
 - an oversized, top-anchored pause dimmer rather than a 1320×720 dimmer
   floating in the middle of the taller view
-- the small square projectile edge marker moved from the old 16:9 bottom
-  clamp to the real 4:3 bottom edge; the touch layout and rune shop are unchanged
+- the small square side-projectile marker docks at the real 4:3 bottom edge
+  instead of following an in-room Y from the old 16:9 area; the touch layout
+  and rune shop are unchanged
 - the animated castle-building gate extended proportionally through the full
   display height, right-aligned so its excess width is clipped from the left
-  without warped gears
+  without warped gears; alignment is applied after scale so it remains stable
+  when the drop animation finishes
 - death and boss-death spotlights retain their original top anchor while their
   vertical beam is extended toward the fallen character
 - screen-local analog/select/back touch artwork hidden from the map,
