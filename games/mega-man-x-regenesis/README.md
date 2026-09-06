@@ -14,9 +14,13 @@ own APK. No extracted game source, artwork, APK, or signing material is included
   short rooms and keeps camera motion consistent with the original game.
 - Enlarge health, weapon, ride-armor, and boss HUDs uniformly to **125%**;
   retain the boss bar's right alignment. Center the **110%** pause layers.
-- Center and enlarge standalone save/difficulty, options, input, achievements,
+- Center and enlarge standalone save/difficulty, input, achievements,
   and touch-remapping menus to **115%**.
-- Enlarge title menu choices to **120%** and settings/input labels to **112%**.
+- Reflow options across the full 384×288 frame with separated text/value columns,
+  16.5-unit row spacing, and labels enlarged uniformly up to **125%**. Longer
+  translations fit their column without clipping; language and save-slot values
+  remain visible. Keep original selection and settings behavior.
+- Enlarge title menu choices to **120%** and input labels to **112%**.
   Center dialogue/warning/timer layers in the taller frame and extend transition
   coverage to the full height. Existing touch controls retain their native anchors.
 - Preserve original scripts except for two camera expressions and added layout
@@ -27,7 +31,11 @@ own APK. No extracted game source, artwork, APK, or signing material is included
 The full game still needs physical-device testing. Extra camera coverage may
 expose level boundaries or artwork that was outside the developer's intended
 frame. Authored menu/cinematic backgrounds are preserved, not stretched or filled
-with invented art. Report affected screens for targeted follow-up adjustments.
+with invented art. In build 1.00.82, the main title background sprite is hidden;
+the visible particles already extend beyond the old 16:9 frame. Its large light
+bars appear only during the opening animation. No background zoom is applied
+because there is no active bounded image to fill. Report affected screens for
+targeted follow-up adjustments.
 
 ## Build
 
@@ -69,7 +77,8 @@ Replace the example executable filename if the release uses a different name.
 Paths with spaces and Unicode are supported. The patcher explicitly reads/writes
 Godot scripts as UTF-8, independent of the Windows system code page.
 
-The patcher recognizes original and patched states, refuses mixed/unknown states,
+Build this revision from the original developer APK, including when updating an
+older patch revision. The patcher recognizes original and current patched states, refuses mixed/unknown states,
 and validates the rebuilt signed result. It matches project settings and script
 structure rather than the APK filename, version code, or whole-APK hash. Bytecode
 version 101 is compiled with GDRE's `4.5.0` definition, also used by this Godot 4.7
