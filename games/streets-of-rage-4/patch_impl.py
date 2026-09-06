@@ -1138,6 +1138,8 @@ def _probe_video(path: Path) -> _VideoInfo:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=False,
     )
     if completed.returncode:
@@ -1257,6 +1259,8 @@ def _patch_video(source: Path, output: Path) -> None:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=False,
     )
     if completed.returncode:

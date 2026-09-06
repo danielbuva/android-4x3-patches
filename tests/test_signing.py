@@ -199,3 +199,19 @@ def test_sign_command_preserves_zipalign_layout(tmp_path: Path, monkeypatch) -> 
     assert "--alignment-preserved" in captured[0]
     option = captured[0].index("--alignment-preserved")
     assert captured[0][option + 1] == "true"
+
+
+def test_windows_signer_bypasses_batch_shell(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    tool = tmp_path / "SDK with spaces" / "apksigner.bat"
+    jar = tool.parent / "lib" / "apksigner.jar"
+    jar.parent.mkdir(parents=True)
+    jar.write_bytes(b"fixture")
+    calls = []
+    monkeypatch.setattr(signing.shutil, "which", lambda name: "java.exe" if name == "java" else None)
+    monkeypatch.setattr(signing.subprocess, "run", lambda command, **kwargs:
+        calls.append((command, kwargs)) or SimpleNamespace(returncode=0, stdout="verified"))
+    apk = str(tmp_path / "café & friends.apk")
+    assert signing._run([str(tool), "verify", apk]) == "verified"
+    assert calls[0][0] == ["java.exe", "-jar", str(jar), "verify", apk]
+    assert not calls[0][1].get("shell", False)

@@ -116,7 +116,9 @@ def patch_sparse(index: bytes, payloads: dict[str, bytes]) -> bytes:
 
 
 def gdre() -> str:
-    path = os.environ.get("GDRE_TOOLS") or shutil.which("gdre_tools")
+    path = os.environ.get("GDRE_TOOLS") or shutil.which("gdre_tools") or shutil.which("gdre_tools.exe")
+    if path:
+        path = str(Path(path).expanduser().resolve())
     if not path or not Path(path).is_file():
         raise ValueError("Install GDRE Tools 2.6.4+ and set GDRE_TOOLS to its executable")
     return path
@@ -124,7 +126,8 @@ def gdre() -> str:
 
 def run_gdre(*args: str) -> None:
     result = subprocess.run([gdre(), "--headless", *args], text=True,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120,
+                            encoding="utf-8", errors="replace")
     if result.returncode or "ERROR:" in result.stdout:
         raise ValueError("GDRE conversion failed: " + result.stdout[-3000:])
 
@@ -134,7 +137,7 @@ def decompile(source: Path, output: Path) -> str:
         raise ValueError("unsupported GDScript bytecode; expected version 101")
     output.mkdir(parents=True, exist_ok=True)
     run_gdre(f"--decompile={source}", "--bytecode=4.5.0", f"--output={output}")
-    return (output / (source.stem + ".gd")).read_text()
+    return (output / (source.stem + ".gd")).read_text(encoding="utf-8")
 
 
 def compact(source: str) -> str:
@@ -169,7 +172,7 @@ def warmup_state(source: str) -> str:
     if not all(x in normalized for x in ("extendsNode", "funcwarm_up_scene(", "func_collect_particles(")):
         raise ValueError("unrecognized ShaderWarmup autoload")
     # Comments are discarded by the compiler; use actual method content as the guard.
-    layout = compact(re.sub(r"(?m)#.*$", "", LAYOUT.read_text()))
+    layout = compact(re.sub(r"(?m)#.*$", "", LAYOUT.read_text(encoding="utf-8")))
     if "func_a4x3_layout(" in normalized:
         if not normalized.endswith(layout):
             raise ValueError("different or partial layout patch detected")
@@ -209,9 +212,9 @@ def apply(extracted: dict[str, Path], output_dir: Path) -> dict[str, Path]:
         if entry == CAMERA:
             source = patch_camera(source)
         elif warmup_state(source) == "original":
-            source += "\n" + LAYOUT.read_text()
+            source += "\n" + LAYOUT.read_text(encoding="utf-8")
         script = output_dir / (Path(entry).stem + ".gd")
-        script.write_text(source)
+        script.write_text(source, encoding="utf-8", newline="\n")
         run_gdre(f"--compile={script}", "--bytecode=4.5.0", f"--output={output_dir}")
         result[entry] = script.with_suffix(".gdc")
     index = output_dir / "assets.sparsepck"

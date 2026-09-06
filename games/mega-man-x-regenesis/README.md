@@ -36,12 +36,38 @@ the root README. Also download [GDRE Tools 2.6.4 or later](https://github.com/GD
 and set `GDRE_TOOLS` to its executable. On macOS, this is the executable inside
 `Godot RE Tools.app/Contents/MacOS/Godot RE Tools`, not the app directory.
 
+### macOS / Linux
+
 ```sh
 export GDRE_TOOLS="/path/to/Godot RE Tools.app/Contents/MacOS/Godot RE Tools"
 ./patch.sh --allow-experimental --check "/path/to/developer.apk"
 ./patch.sh --allow-experimental "/path/to/developer.apk" \
   --output "/path/to/Mega Man X Regenesis-4x3.apk"
 ```
+
+### Windows PowerShell
+
+Download the **Windows** GDRE archive and extract its whole directory. Point the
+variable at the executable supplied in that archive (prefer its console build):
+
+```powershell
+$env:GDRE_TOOLS = "C:\Tools\GDRE\gdre_tools.exe"
+.\patch.ps1 --allow-experimental --check "C:\APKs\developer.apk"
+.\patch.ps1 --allow-experimental "C:\APKs\developer.apk" `
+  --output "C:\APKs\Mega Man X Regenesis-4x3.apk"
+```
+
+### Windows Command Prompt
+
+```bat
+set "GDRE_TOOLS=C:\Tools\GDRE\gdre_tools.exe"
+patch.bat --allow-experimental --check "C:\APKs\developer.apk"
+patch.bat --allow-experimental "C:\APKs\developer.apk" --output "C:\APKs\Mega Man X Regenesis-4x3.apk"
+```
+
+Replace the example executable filename if the release uses a different name.
+Paths with spaces and Unicode are supported. The patcher explicitly reads/writes
+Godot scripts as UTF-8, independent of the Windows system code page.
 
 The patcher recognizes original and patched states, refuses mixed/unknown states,
 and validates the rebuilt signed result. It matches project settings and script
@@ -53,7 +79,11 @@ export. Unknown engine bytecode or changed startup/camera logic requires review.
 
 The normal repository signing flow uses a persistent private key under
 `~/.local/share/android-4x3-patches/` on macOS/Linux. Back up that entire directory
-securely, including password files. Never commit it. No alternate package ID is
+securely, including password files. On Windows the corresponding directory is
+`%LOCALAPPDATA%\android-4x3-patches\`. To switch build computers while keeping
+in-place updates, securely copy the signing files into that directory **before**
+the first build; otherwise the new computer generates a different key. Never
+commit signing files. No alternate package ID is
 needed on a device without the original developer-signed installation.
 
 For updates, supply the new developer APK, run the compatibility check, rebuild

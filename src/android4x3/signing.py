@@ -101,11 +101,21 @@ def _secure_write(path: Path, text: str) -> None:
 
 
 def _run(command: list[str], *, env: dict[str, str] | None = None) -> str:
+    # Use the SDK's Java entry point directly on Windows. This keeps APK paths
+    # containing spaces or cmd.exe metacharacters out of the batch-file shell.
+    if Path(command[0]).name.lower() == "apksigner.bat":
+        jar = Path(command[0]).parent / "lib" / "apksigner.jar"
+        java = shutil.which("java")
+        if not java or not jar.is_file():
+            raise PatchError("Windows apksigner requires Java on PATH and SDK lib/apksigner.jar")
+        command = [java, "-jar", str(jar), *command[1:]]
     completed = subprocess.run(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         env=env,
         check=False,
     )

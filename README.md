@@ -54,6 +54,7 @@ The tested Android versions of **Brotato**, **Dead Cells**, **DREDGE**, and **Th
 - A current Android SDK Build Tools release (`zipalign` and `apksigner`; tested with 36.0.0)
 - Python packages from `requirements.txt`
 - For Advent Neon, FAITH, and Hotline Miami: UndertaleModTool CLI 0.9.1.2 or newer (Advent Neon tested with 0.9.2.0), available as `UndertaleModCli` on `PATH` or through `ANDROID_4X3_UMT`/`UMT_CLI`
+- For Mega Man X Regenesis: [GDRE Tools 2.6.4+](https://github.com/GDRETools/gdsdecomp/releases), using the native Mac or Windows download; set `GDRE_TOOLS` to the executable (see [platform commands](games/mega-man-x-regenesis/README.md#build))
 - For Streets of Rage 4: `ffmpeg` and `ffprobe` on `PATH`, with the `libx264` encoder
 
 The patcher looks for Android Build Tools on `PATH`, under `ANDROID_HOME`/`ANDROID_SDK_ROOT`, and in common SDK locations.
@@ -95,6 +96,17 @@ py -3 -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 patch.bat "C:\path\to\Game.apk"
 ```
+
+If PowerShell blocks `.ps1` scripts under your local execution policy, use
+`patch.bat` or `.\.venv\Scripts\python.exe patch.py` with the same arguments.
+Choose native builds of external tools for your host OS; Mac executables cannot
+run on Windows and vice versa.
+
+The [Mac and Windows CI workflow](.github/workflows/platforms.yml) runs the shared
+synthetic suite, real Android APK signing, and a full synthetic Regenesis
+compile/patch/rebuild/sign round trip on both operating systems. It also checks
+all three launchers. These tests use no game files; they do not replace physical
+Android gameplay checks or prove compatibility with every future developer APK.
 
 The default output is `output/<Game>-4x3.apk`. Input files are never overwritten.
 

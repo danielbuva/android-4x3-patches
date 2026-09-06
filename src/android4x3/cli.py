@@ -275,6 +275,11 @@ def run(argv: list[str] | None = None) -> int:
 
 
 def main() -> None:
+    # A redirected Windows console may use a legacy code page. Diagnostics must
+    # not crash after a successful patch because a path/checkmark is unencodable.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
     try:
         raise SystemExit(run())
     except (PatchError, OSError, ValueError) as exc:

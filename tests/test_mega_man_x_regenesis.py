@@ -112,3 +112,53 @@ def test_sparse_index_tracks_changed_lengths_and_hashes():
     assert patched == sparse(updated)
     m.verify_sparse(patched, updated)
     assert m.patch_sparse(patched, updated) == patched
+
+
+def test_native_regenesis_cli_roundtrip(tmp_path, make_apk, binary_manifest):
+    """Real GDRE + zipalign + keytool + signing on each OS; no proprietary input."""
+    import os
+    import subprocess
+    import sys
+    import zipfile
+    from android4x3 import signing
+    m = module()
+    try:
+        m.gdre()
+        signing.find_android_tool("zipalign")
+        signing.find_android_tool("apksigner")
+    except (ValueError, RuntimeError) as exc:
+        if os.environ.get("ANDROID4X3_REQUIRE_NATIVE_TESTS"):
+            pytest.fail(str(exc))
+        pytest.skip(str(exc))
+    work = tmp_path / "Unicode café 日本語 & spaces"
+    work.mkdir()
+    source_camera = work / "camera.gd"
+    source_warmup = work / "shader_warmup.gd"
+    source_camera.write_text(camera(), encoding="utf-8")
+    source_warmup.write_text(
+        'extends Node\nconst GREETING = "café 日本語 ⚡"\n'
+        'func warm_up_scene(root):\n pass\nfunc _collect_particles(node, list):\n pass\n',
+        encoding="utf-8")
+    for script in (source_camera, source_warmup):
+        m.run_gdre(f"--compile={script}", "--bytecode=4.5.0", f"--output={work}")
+    payloads = {m.CONFIG: config(), m.CAMERA: source_camera.with_suffix(".gdc").read_bytes(),
+                m.WARMUP: source_warmup.with_suffix(".gdc").read_bytes()}
+    payloads[m.INDEX] = sparse(payloads)
+    source = make_apk(work / "Input 日本語.apk",
+        manifest=binary_manifest("com.example.megamanxregenesis", "1.0.0", 1),
+        entries=[(name, data, zipfile.ZIP_DEFLATED) for name, data in payloads.items()])
+    output = work / "Output café-4x3.apk"
+    repo = Path(__file__).resolve().parents[1]
+    env = {**os.environ, "LOCALAPPDATA": str(work / "signing state"),
+           "XDG_DATA_HOME": str(work / "signing state"), "PYTHONIOENCODING": "ascii"}
+    result = subprocess.run([sys.executable, str(repo / "patch.py"), "--allow-experimental",
+        str(source), "--output", str(output)], env=env, capture_output=True,
+        text=True, encoding="utf-8", errors="replace", timeout=180)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Rebuilt and verified APK" in result.stdout
+    with zipfile.ZipFile(output) as archive:
+        check = work / "check.gdc"
+        check.write_bytes(archive.read(m.WARMUP))
+        assert 'café 日本語 ⚡' in m.decompile(check, work / "decompiled")
+        assert m.config_state(archive.read(m.CONFIG)) == "patched"
+        m.verify_sparse(archive.read(m.INDEX), {e: archive.read(e) for e in payloads if e != m.INDEX})
