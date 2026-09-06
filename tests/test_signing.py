@@ -81,7 +81,9 @@ def test_signing_failure_does_not_create_a_false_success(
         lambda custom=None: (keystore, "android4x3", password_file, password_file),
     )
 
-    def fail_sign(command: list[str], *, env=None) -> str:
+    working_dirs = []
+    def fail_sign(command: list[str], *, env=None, cwd=None) -> str:
+        working_dirs.append(cwd)
         calls.append(command)
         raise PatchError("mocked apksigner failure")
 
@@ -92,8 +94,9 @@ def test_signing_failure_does_not_create_a_false_success(
 
     assert len(calls) == 1
     assert calls[0][0] == str(apksigner)
-    assert str(aligned) in calls[0]
-    assert str(signed) in calls[0]
+    base = Path(working_dirs[0] or Path.cwd())
+    assert (base / calls[0][-1]).resolve() == aligned.resolve()
+    assert (base / calls[0][calls[0].index("--out") + 1]).resolve() == signed.resolve()
     assert not signed.exists()
 
 
