@@ -100,7 +100,7 @@ def _secure_write(path: Path, text: str) -> None:
             pass
 
 
-def _run(command: list[str], *, env: dict[str, str] | None = None) -> str:
+def _run(command: list[str], *, env: dict[str, str] | None = None, cwd: Path | None = None) -> str:
     # Use the SDK's Java entry point directly on Windows. This keeps APK paths
     # containing spaces or cmd.exe metacharacters out of the batch-file shell.
     if Path(command[0]).name.lower() == "apksigner.bat":
@@ -117,6 +117,7 @@ def _run(command: list[str], *, env: dict[str, str] | None = None) -> str:
         encoding="utf-8",
         errors="replace",
         env=env,
+        cwd=cwd,
         check=False,
     )
     if completed.returncode:
@@ -159,7 +160,7 @@ def ensure_keystore(custom: Path | None = None) -> tuple[Path, str, Path, Path]:
                 "-storetype",
                 "PKCS12",
                 "-keystore",
-                str(keystore),
+                keystore.name if os.name == "nt" else str(keystore),
                 "-alias",
                 alias,
                 "-keyalg",
@@ -171,12 +172,13 @@ def ensure_keystore(custom: Path | None = None) -> tuple[Path, str, Path, Path]:
                 "-dname",
                 "CN=Android 4x3 Patcher",
                 "-storepass:file",
-                str(password_file),
+                password_file.name if os.name == "nt" else str(password_file),
                 "-keypass:file",
-                str(key_password_file),
+                key_password_file.name if os.name == "nt" else str(key_password_file),
                 "-noprompt",
             ],
             env=environment,
+            cwd=state if os.name == "nt" else None,
         )
         try:
             os.chmod(keystore, 0o600)
@@ -244,22 +246,34 @@ def _sign_with_files(
     password_file: Path,
     key_password_file: Path,
 ) -> None:
+    # Java 17's Windows launcher cannot round-trip arbitrary Unicode argv.
+    # Pass the Unicode working directory through CreateProcessW and use relative
+    # credential paths, so non-ANSI user/profile names never enter Java's argv.
+    cwd = keystore.parent.resolve() if os.name == "nt" else None
+    def argument(path: Path) -> str:
+        if cwd is not None:
+            try:
+                return os.path.relpath(path.resolve(), cwd)
+            except ValueError:  # A different Windows drive requires an absolute path.
+                pass
+        return str(path)
     _run(
         [
             str(apksigner),
             "sign",
             "--ks",
-            str(keystore),
+            argument(keystore),
             "--ks-key-alias",
             alias,
             "--ks-pass",
-            f"file:{password_file}",
+            f"file:{argument(password_file)}",
             "--key-pass",
-            f"file:{key_password_file}",
+            f"file:{argument(key_password_file)}",
             "--alignment-preserved",
             "true",
             "--out",
-            str(signed),
-            str(aligned),
-        ]
+            argument(signed),
+            argument(aligned),
+        ],
+        **({"cwd": cwd} if cwd is not None else {}),
     )
