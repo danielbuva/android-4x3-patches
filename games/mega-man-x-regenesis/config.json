@@ -1,0 +1,27 @@
+{
+  "id": "mega-man-x-regenesis",
+  "display_name": "Mega Man X Regenesis",
+  "package_names": [
+    "com.example.megamanxregenesis"
+  ],
+  "engine": "Godot 4 GDScript",
+  "status": "experimental",
+  "output_name": "Mega Man X Regenesis-4x3.apk",
+  "tested_versions": [
+    "1.00.82 (Android manifest 1.0.0, code 1)"
+  ],
+  "required_entries": [
+    "assets/project.binary",
+    "assets/scripts/Player/camera.gdc",
+    "assets/scripts/shader_warmup.gdc",
+    "assets/assets.sparsepck"
+  ],
+  "preferred_entries": [],
+  "entry_globs": [],
+  "compatibility": {
+    "strategy": "semantic project settings, camera expressions and ShaderWarmup lifecycle; GDScript bytecode 101",
+    "version_is_advisory": true,
+    "whole_apk_hash_required": false,
+    "visual_verification": "pending"
+  }
+}

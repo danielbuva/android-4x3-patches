@@ -30,6 +30,7 @@ def test_publishable_registry_loads_every_declared_game_module() -> None:
         "hollow-knight",
         "hotline-miami",
         "huntdown",
+        "mega-man-x-regenesis",
         "rogue-legacy",
         "sea-of-stars",
         "shin-chan",
