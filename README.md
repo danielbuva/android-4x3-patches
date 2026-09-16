@@ -29,6 +29,7 @@ Reproducible, target-verified patches that adapt selected Android game ports to 
 | Rogue Legacy | `com.roguelegacy.port` | **Experimental:** expanded 1320×990 gameplay and touch space | Centered/animated options, full-height map/stable right-aligned proportional gate/pause dimmer, bottom-docked projectile marker and top-anchored death spotlights, and unobstructed map/legacy pages | 1.4.1-r2 (1) | Semantic managed-code target detection; latest screen-specific refinements await visual confirmation |
 | Sea of Stars | `com.playdigious.seaofstars` | 640×480 renderer with added vertical world view | Edge-to-edge 4:3 UI | 3.0.60158 (60158) | Target-detected |
 | Shin Chan: Shiro & Coal Town | `com.crunchyroll.gv.shinchanshiroandcoal.game` | 4:3 gameplay, title, and menu | Opening movie uses proportional center crop | 1.0.2 (11) | Target-detected |
+| Skate 3 Mobile | `chat.buku.skate3` | **Experimental:** native 4:3 with added vertical world view and matching visibility planes | Grouped perimeter HUD, enlarged startup dialogs, raised name entry, full-screen backdrops, EA-only crop, optional 4:3 artwork; Touch button removed | 2.1.0 (20100) | Guarded ARM64 instructions and semantic DEX detection; opening gameplay checked at 1280×960 |
 | Skul: The Hero Slayer | `com.playdigious.skul` | 640×480 gameplay | 1920×1440 UI/HUD reference | 1.0.13 (66) | Target-detected |
 | STALKER: Call of Pripyat Mobile | `com.Death13.S.T.A.L.K.E.R.CallofPripyat` | **Experimental:** 4:3 render tiers and Vert+ cameras preserving the original 2:1 horizontal view | Main, pause, author UI, resolution labels, and substantially enlarged settings text | 0.3 (1) | Exact per-ABI native and semantic Unity target detection; embedded Russian UI has no safe English switch |
 | Streets of Rage 4 | `com.playdigious.sor4` | Vert+ gameplay with the original horizontal view | 1920×1440 roots/nested canvases, filler removal, centered backgrounds/stage map, bottom-aligned controls and prompts, proportional videos | 1.4.5 (91) | Exact managed + counted named-GUI detection; gameplay verified, latest pre-game placement awaits visual confirmation |
@@ -126,6 +127,7 @@ The default output is `output/<Game>-4x3.apk`. Input files are never overwritten
 ./patch.sh --allow-experimental "/path/to/Grimvalor-v1.2.13.apk"
 ./patch.sh --allow-experimental "/path/to/Huntdown-v0.1-b200040.apk"
 ./patch.sh --allow-experimental "/path/to/Rogue-Legacy.apk"
+./patch.sh --allow-experimental "/path/to/Skate3-mobile.apk"
 ./patch.sh --allow-experimental "/path/to/STALKER-Call-of-Pripyat.apk"
 ./patch.sh "/path/to/Streets-of-Rage-4.apk"
 ```
@@ -161,6 +163,33 @@ Install after reviewing that implication:
 ```sh
 adb install "/path/to/Game-4x3.apk"
 ```
+
+### Optional adopted SD storage
+
+Add `--install-adopted` to build, sign, and install in one command:
+
+```sh
+./patch.sh --allow-experimental --install-adopted "/path/to/Skate3-mobile.apk"
+```
+
+This option works with every registered patch. It requires `adb`, USB debugging,
+and an already adopted SD card selected as Android's primary shared storage.
+If necessary, use **Migrate data** in Android Storage settings first. A portable
+SD card is not adopted storage. Add `--device SERIAL` to select a device when
+more than one is connected. Windows launchers accept the same flags.
+
+The installer streams the signed APK directly to that volume, then verifies
+that the APK, private app data, and primary shared storage are on it. Games using
+Android's standard app storage paths consequently keep their extracted files,
+saves, and caches there. Android's own package records and system-managed files
+can still use internal storage. Game-specific custom paths are not rewritten.
+
+The flag affects installation only: it embeds no device UUID or storage path in
+the APK. Without it, patching behaves as before. It never formats a card,
+migrates device-wide storage, uninstalls an app, or clears saves. A signing
+conflict stops installation and retains the finished APK; resolve it using the
+save-backup guidance above. `--check`, `--dry-run`, and `--unsigned` cannot be
+combined with installation.
 
 ## Troubleshooting
 
