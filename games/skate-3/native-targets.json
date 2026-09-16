@@ -1,0 +1,80 @@
+[
+  {
+    "name": "force native 4:3 output",
+    "before": "1f09007108b1891aa9c90190087da80a",
+    "after": "1f09007108b1891aa9c9019028008052",
+    "symbol": null
+  },
+  {
+    "name": "camera inverse aspect",
+    "before": "2018601e21d5e07e2020621e690000540018691e0840621e",
+    "after": "2018601e21d5e07e2020621e690000542019601e0840621e",
+    "symbol": "_ZN6skate312native_scene20NativeOutputHorScaleEPKf"
+  },
+  {
+    "name": "camera Y column",
+    "before": "015440bd020840bd036440bd041840bd057440bd062840bd2108201e4208201e6308201e8408201ea508201ec608201e015400bd018440bd020800bd023840bd2108201e036400bd4008201e041800bd057400bd062800bd018400bd003800bd",
+    "after": "015840bd020c40bd036840bd041c40bd057840bd062c40bd2108201e4208201e6308201e8408201ea508201ec608201e015800bd018840bd020c00bd023c40bd2108201e036800bd4008201e041c00bd057800bd062c00bd018800bd003c00bd",
+    "symbol": "_ZN6skate312native_scene26ApplyPublishedCameraAspectERNS0_10FrameSceneEf"
+  },
+  {
+    "name": "frame camera inverse aspect",
+    "before": "2018601e01d5e07e2020621e690000540018681e0b40621e",
+    "after": "2018601e01d5e07e2020621e690000540019601e0b40621e",
+    "symbol": "_ZN6skate312native_scene15BuildFrameSceneEPhPKNS0_12SubmitRecordEm"
+  },
+  {
+    "name": "frame camera Y column",
+    "before": "e0f756bde10757bde2ab56bde3bb56bde41757bde52757bd6009201e6109211ee6cb56bd6209221e6309231e6409241ee0f716bde0db56bde10717bd6109251e6509261e6009201ee2ab16bde3bb16bde41717bde12717bde5cb16bde0db16bd",
+    "after": "e0fb56bde10b57bde2af56bde3bf56bde41b57bde52b57bd6009201e6109211ee6cf56bd6209221e6309231e6409241ee0fb16bde0df56bde10b17bd6109251e6509261e6009201ee2af16bde3bf16bde41b17bde12b17bde5cf16bde0df16bd",
+    "symbol": "_ZN6skate312native_scene15BuildFrameSceneEPhPKNS0_12SubmitRecordEm"
+  },
+  {
+    "name": "UI inverse aspect",
+    "before": "0101271e28c7915268fcb7720201271e48e19a526884a7722118201e0028221e",
+    "after": "0101271e28c7915268fcb7720201271e48e19a526884a7720118211e0028221e",
+    "symbol": null
+  },
+  {
+    "name": "UI scale Y",
+    "before": "e90324912019c03d0090814f2019803d",
+    "after": "e9032491201dc03d0090814f201d803d",
+    "symbol": null
+  },
+  {
+    "name": "UI full width edge snap",
+    "before": "011d2a1eedfb09bdffff09b9",
+    "after": "011d2a1efffb09b9ffff09b9",
+    "symbol": null
+  },
+  {
+    "name": "culling native renderer gate",
+    "before": "a04dff90006c0d91010280528e239e94",
+    "after": "050000141f2003d51f2003d51f2003d5",
+    "symbol": "sub_82817138"
+  },
+  {
+    "name": "culling vertical expansion factor",
+    "before": "204dff90000c2291c10380526f269e94",
+    "after": "08102d1ee82300bd360000141f2003d5",
+    "symbol": "sub_82817138"
+  },
+  {
+    "name": "culling top and bottom planes",
+    "before": "08848252898482520a858252cb02080b88858252d802090bebdb0029da020a0bd902080b694a6bb86b4a78b8684a7ab86a4a79b8e0230091698109aa8b868252488108aa0a868252dc020b0b290dc0dadb020a0b080dc0daa9a33da90987825288878252d702090bd602080b",
+    "after": "08888252898882520a898252cb02080b88898252d802090bebdb0029da020a0bd902080b694a6bb86b4a78b8684a7ab86a4a79b8e0230091698109aa8b8a8252488108aa0a8a8252dc020b0b290dc0dadb020a0b080dc0daa9a33da9098b8252888b8252d702090bd602080b",
+    "symbol": "sub_82817138"
+  },
+  {
+    "name": "photo capture preserves full width",
+    "before": "6020201ee87709b9ff7f09b941fc212e03cc231e02102c1e0038231ee37309bd0008221ee07b09bd",
+    "after": "6020201ee87309b9ff7b09b941fc212e03cc231e02102c1e0038231ee37709bd0008221ee07f09bd",
+    "symbol": null
+  },
+  {
+    "name": "reserve movie skipping for Start so menu A cannot skip the next movie",
+    "symbol": "_ZN6skate39demo_path29ShouldForceIntroMovieCompleteEv",
+    "before": "e80b407909028252a1c901d021140491",
+    "after": "e80b407909008252a1c901d021140491"
+  }
+]

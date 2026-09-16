@@ -31,6 +31,8 @@ stored in this record.
 
 | Mega Man X Regenesis | Experimental | Developer APK 1.00.82 rebuilt with the public command; signed post-state and sparse-index integrity verified. Streamed installation and in-place updates succeeded on adopted storage. Opening sequence, enlarged save-selection screen, and opening in-world dialogue inspected at 1280×960; no script errors after correcting the sparse directory. Transient Vulkan surface-loss messages occurred during transitions, followed by successful rendering; extended stability testing is pending. Options follow-up: inspected all 14 rows at 1280×960 with separated labels, checkboxes, volume bars, language and save-slot values; long English labels remain visible. The title background sprite is disabled in this developer build; settled-menu particles extend outside the old 16:9 frame, so no image crop was applied. All 192 synthetic tests pass locally, including the native rebuild/signing fixture. Full gameplay and translated UI review remain pending. |
 
+| Skate 3 Mobile | Experimental | Buku313 2.1.0 (20100), ARM64: clean-to-patched signed reproduction; 24 native/DEX targets; actual ARM64 camera/culling/HUD/hook checks; user accepted the 16:9/4:3 gameplay comparison and raised name-entry dialog. Adopted APK/private/shared storage and one installed package verified. Full career and extended stability testing remain pending. |
+
 The supported-games table in [README.md](README.md#supported-patches) is the
 authoritative status list. Experimental modules require
 `--allow-experimental`; that flag acknowledges the documented visual state and
@@ -54,6 +56,51 @@ without horizontal stretching. The runtime menu-open hook was required because
 the port restores its original inventory transform after loading. The process
 remained alive without a fatal exception. Final gameplay-wide
 acceptance remains the device owner's check.
+
+### Skate 3 Mobile 2.1.0
+
+The public patch command reproduces the modified APK from the original port,
+rebuilds/aligned-signs it, and verifies all 24 targets. Compatibility uses guarded
+executable instructions, exported native function ranges, resolved movie-state
+loads, immutable render-frame layout, and DEX method/field identities. The APK
+patch does not change the Xbox ISO or extracted assets. A separate optional
+background packer edits four named texture arenas in a new archive copy; no
+commercial or generated game assets are included in the repository.
+
+Proprietary-free tests cover ambiguous/unknown/relocated targets, architecture,
+DEX identity, mixed/post states, idempotence, ELF hook integrity, matrix columns,
+connected portrait/panel groups, full-canvas and tiled backdrop classification,
+stock/custom title effects, guest button byte order, and adopted-install
+failures without uninstalling or clearing data. Development also executed the
+actual patched ARM64 camera, culling, display, keyboard, and output-aspect code
+with synthetic inputs. Horizontal camera coverage stays unchanged; top/bottom
+visibility expands without repeated scaling. A connected Coach Frank portrait
+and panel retain a common anchor while unrelated bottom HUD moves outward.
+Only the active first-movie YUV draw uses cover cropping. Hook calls preserve
+live registers and stack state. The keyboard hook requests (640,120) with a
+top-center pivot at 1280×960. Reapplying output settings retains exactly 4:3.
+
+Physical-device checks at 1280×960 covered the EA movie ending, clean title
+background/grain/glow alignment, enlarged difficulty and camera dialogs, camera
+previews fitting their frames, initial gameplay, menus, absence of TOUCH/HIDE,
+and adopted-storage installation. The first tutorial now shows Coach Frank
+with a joined head/body and its intact text panel; the objective HUD sits at the
+bottom edge. The device owner accepted the original 16:9
+versus patched 4:3 gameplay comparison and confirmed the raised name field. Fresh team-name and character-name dialogs were also
+verified above the Android keyboard.
+The off-canvas “Sign up” action remains implemented but outside the visible edge.
+Only one package remains installed.
+
+Startup testing used a temporary isolated test save location; the final APK
+retains the original save paths. A camera confirmation was also reaching the
+port's global movie-skip poll. Its shortcut now recognizes Start only, including
+the guest button field's big-endian representation. A subsequent fresh flow
+completed the intro movie and reached the populated team-creation prompt
+without the empty difficulty screen, then advanced through naming,
+customization, and the first tutorial. The enlarged dialog scales
+preview videos and frames together. Complete career, every individual overlay,
+and long-session behavior have not been exhaustively tested; this module
+remains experimental.
 
 ## Native 4:3 and deferred titles
 

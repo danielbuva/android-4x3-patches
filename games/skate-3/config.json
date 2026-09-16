@@ -1,0 +1,12 @@
+{
+  "id": "skate-3",
+  "display_name": "Skate 3 Mobile",
+  "package_names": ["chat.buku.skate3"],
+  "engine": "native ARM64 static recompilation / rexglue",
+  "status": "experimental",
+  "output_name": "Skate3-Mobile-4x3.apk",
+  "tested_versions": ["2.1.0 (20100)"],
+  "required_entries": ["lib/arm64-v8a/libskate3.so", "classes.dex", "lib/arm64-v8a/librexruntime.so"],
+  "preferred_entries": ["lib/*/libskate3.so", "lib/*/librexruntime.so"],
+  "entry_globs": ["lib/*/libskate3.so", "lib/*/librexruntime.so"]
+}

@@ -36,6 +36,7 @@ def test_publishable_registry_loads_every_declared_game_module() -> None:
         "shin-chan",
         "silksong",
         "skul",
+        "skate-3",
         "stalker-call-of-pripyat",
         "streets-of-rage-4",
         "vampire-survivors",

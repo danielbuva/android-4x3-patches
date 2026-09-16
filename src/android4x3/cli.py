@@ -16,6 +16,7 @@ from .apk import extract_entries, inspect_apk, repack_with_optional_branding, re
 from .errors import PatchError, ReportedPatchError
 from .registry import GameConfig, Registry
 from .signing import align_apk, sign_apk, verify_alignment
+from .install import prepare_adopted, install_adopted
 
 
 VALID_STATES = {"original", "patched", "unsupported", "ambiguous"}
@@ -41,6 +42,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--force", action="store_true", help="replace an existing output")
     parser.add_argument("--allow-experimental", action="store_true")
     parser.add_argument("--unsigned", action="store_true", help="produce an aligned unsigned APK")
+    parser.add_argument("--install-adopted", action="store_true", help="install the signed output on the connected device's adopted primary storage")
+    parser.add_argument("--device", help="ADB serial for --install-adopted when multiple devices are connected")
     parser.add_argument("--keystore", type=Path, help="custom keystore; password comes from ANDROID4X3_KEYSTORE_PASSWORD")
     return parser
 
@@ -120,6 +123,10 @@ def _human(report: dict[str, Any], *, checked: bool) -> str:
                 str(report["output"]),
             ]
         )
+    if report.get("installation"):
+        lines.extend(["", "✓ Installed APK and private app data on adopted storage",
+                      f"Device: {report['installation']['device']}",
+                      f"Data: {report['installation']['data_path']}"])
     return "\n".join(lines)
 
 
@@ -145,6 +152,10 @@ def _list_games(registry: Registry, json_output: bool) -> int:
 
 def run(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.install_adopted and (args.unsigned or args.check or args.dry_run or args.list_games):
+        raise PatchError("--install-adopted requires a signed build; it cannot be combined with --unsigned, --check, --dry-run or --list-games")
+    if args.device and not args.install_adopted:
+        raise PatchError("--device requires --install-adopted")
     repo = _repo_root()
     registry = Registry(repo / "games")
     if args.list_games:
@@ -210,6 +221,8 @@ def run(argv: list[str] | None = None) -> int:
             print(json.dumps(report, indent=2, sort_keys=True) if args.json else _human(report, checked=True))
             return 0
 
+        adopted_device = prepare_adopted(args.device) if args.install_adopted else None
+
         output = (args.output or _default_output(config)).expanduser().resolve()
         if output == input_apk:
             raise PatchError("input and output APK paths must differ")
@@ -268,6 +281,12 @@ def run(argv: list[str] | None = None) -> int:
                 "signed": not args.unsigned,
             }
         )
+        if adopted_device is not None:
+            try:
+                report["installation"] = install_adopted(adopted_device, output, manifest.package)
+            except PatchError as exc:
+                report["error"] = str(exc)
+                raise ReportedPatchError(str(exc), report) from exc
         print(json.dumps(report, indent=2, sort_keys=True) if args.json else _human(report, checked=False))
         if args.keep_work:
             print(f"Work directory: {work}", file=sys.stderr)

@@ -8,6 +8,11 @@ This guide turns a game APK you already own into a separately signed 4:3 APK. It
 2. Keep a copy of your original APK somewhere safe. This project does not provide game APKs.
 3. Back up any important saves before installing a patched build. A patched APK is signed with your own local key, so Android may require you to uninstall a differently signed existing installation. Uninstalling can erase private app data.
 
+For a device with low internal storage, the patch command supports
+`--install-adopted`. See [adopted SD storage](README.md#optional-adopted-sd-storage)
+for requirements and a complete example. The SD card must already be adopted
+and selected as primary shared storage; the patcher does not format it.
+
 ## 1. Install the required tools
 
 Install these before continuing:
