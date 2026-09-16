@@ -226,3 +226,81 @@ def test_check_rejects_corrupt_unrelated_apk_entry(
 
     with pytest.raises(PatchError, match="CRC verification failed"):
         cli.run(["--check", str(apk)])
+
+
+@pytest.fixture
+def game_data_case(tmp_path, make_synthetic_game, make_apk, text_manifest, monkeypatch):
+    repo = tmp_path/'repo'
+    game = make_synthetic_game(repo)
+    source = game/'patch_impl.py'
+    source.write_text(source.read_text()+'''
+
+def probe_game_data(data):
+    return {"state": _state(data)}
+
+def patch_game_data(data):
+    return b"PATCHED"
+''')
+    apk = make_apk(tmp_path/'original.apk',manifest=text_manifest('example.synthetic.game'),
+                   entries=[(SYNTHETIC_ENTRY,b'ORIGINAL',zipfile.ZIP_STORED)])
+    data = tmp_path/'fedynamic.big'
+    data.write_bytes(b'ORIGINAL')
+    output = tmp_path/'result.apk'
+    monkeypatch.setattr(cli,'_repo_root',lambda:repo)
+    monkeypatch.setattr(cli,'repack_with_optional_branding',_simple_repack)
+    monkeypatch.setattr(cli,'align_apk',_simple_align)
+    monkeypatch.setattr(cli,'verify_alignment',lambda _:None)
+    return apk,data,output,source
+
+
+def test_cli_game_data_check_and_build_preserve_inputs(game_data_case,capsys):
+    apk,data,output,_ = game_data_case
+    args = [str(apk),'--game-data',str(data),'--output',str(output),'--json']
+    assert cli.run([*args,'--check']) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report['game_data']['state'] == 'original'
+    assert not output.exists()
+    assert cli.run([*args,'--unsigned']) == 0
+    report = json.loads(capsys.readouterr().out)
+    artifact = Path(report['game_data']['output'])
+    assert artifact == output.with_name('result-fedynamic.big')
+    assert artifact.read_bytes() == b'PATCHED'
+    assert data.read_bytes() == b'ORIGINAL'
+    assert report['game_data']['post_state'] == 'patched'
+    with zipfile.ZipFile(apk) as original:
+        assert original.read(SYNTHETIC_ENTRY) == b'ORIGINAL'
+
+
+@pytest.mark.parametrize('destination',['source','apk','output'])
+def test_cli_game_data_rejects_colliding_paths_even_with_force(game_data_case,destination):
+    apk,data,output,_ = game_data_case
+    collision = {'source':data,'apk':apk,'output':output}[destination]
+    with pytest.raises(PatchError,match='paths must all differ'):
+        cli.run([str(apk),'--game-data',str(data),'--game-data-output',str(collision),
+                 '--output',str(output),'--force','--unsigned'])
+    assert data.read_bytes() == b'ORIGINAL'
+    assert not output.exists()
+
+
+def test_cli_game_data_unknown_input_or_failed_post_check_publishes_nothing(game_data_case):
+    apk,data,output,source = game_data_case
+    args = [str(apk),'--game-data',str(data),'--output',str(output),'--unsigned']
+    data.write_bytes(b'unknown')
+    with pytest.raises(PatchError,match='not recognized'):
+        cli.run(args)
+    data.write_bytes(b'ORIGINAL')
+    source.write_text(source.read_text().replace('return b"PATCHED"','return b"broken"'))
+    with pytest.raises(PatchError,match='post-patch verification'):
+        cli.run(args)
+    assert not output.exists()
+    assert not output.with_name('result-fedynamic.big').exists()
+
+
+def test_cli_game_data_refuses_existing_archive_output(game_data_case):
+    apk,data,output,_ = game_data_case
+    archive = output.with_name('result-fedynamic.big')
+    archive.write_bytes(b'keep me')
+    with pytest.raises(PatchError,match='game-data output exists'):
+        cli.run([str(apk),'--game-data',str(data),'--output',str(output),'--unsigned'])
+    assert archive.read_bytes() == b'keep me'
+    assert not output.exists()

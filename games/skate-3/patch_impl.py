@@ -28,6 +28,22 @@ KEYBOARD_STUB = bytes.fromhex(
     "fe0b40f9ffc30091ff8301d100000014")
 
 
+def _backgrounds():
+    path = Path(__file__).with_name("backgrounds.py")
+    spec = importlib.util.spec_from_file_location("android4x3_skate3_backgrounds", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def probe_game_data(data):
+    return _backgrounds().probe_archive(data)
+
+
+def patch_game_data(data):
+    return _backgrounds().patch_archive(data)
+
+
 def _helper():
     global _HELPER
     if _HELPER is None:

@@ -1,10 +1,13 @@
-"""Pack user-supplied 4:3 art into a COPY of Skate 3's frontend archive.
+"""Apply the bundled 4:3 artwork delta to a COPY of the frontend archive.
 
-Requires Pillow >= 12. No game assets or generated artwork are distributed.
-Never changes the source archive. Use alongside this game's APK patch.
+The original game archive is required; separate artwork is not. Custom image
+packing remains available with --title/--menu and requires Pillow >= 12.
 """
 import argparse
 import io
+import hashlib
+import json
+import zlib
 import struct
 from pathlib import Path
 
@@ -158,14 +161,13 @@ def replace_art(data, art, title):
 
 
 def build(archive, title, menu):
-    result = bytearray(archive)
     targets = {
         'data/fe/source/screens/bootflow/pressstart.rx2': (title,True),
         'data/fe/source/screens/demo/pressstart.rx2': (title,True),
         'data/fe/source/screens/bootflow/welcomescreen.rx2': (menu,False),
         'data/fe/source/screens/bootflow/coachfrank.rx2': (menu,False),
     }
-    found = set()
+    replacements = {}
     for name,toc,compression,offset,compressed,size in entries(archive):
         if name not in targets:
             continue
@@ -175,13 +177,30 @@ def build(archive, title, menu):
         replacement = replace_art(data,art,is_title)
         if len(replacement) != size:
             raise ValueError('Texture edit changed the arena size')
+        replacements[name] = replacement
+    if set(replacements) != set(targets):
+        raise ValueError('Required named frontend resources are missing')
+    return replace_members(archive, replacements)
+
+
+def replace_members(archive, replacements):
+    if not replacements:
+        return bytes(archive)
+    result = bytearray(archive)
+    found = set()
+    for name,toc,compression,offset,compressed,size in entries(archive):
+        if name not in replacements:
+            continue
+        replacement = replacements[name]
+        if len(replacement) != size:
+            raise ValueError('Texture edit changed the arena size')
         new_offset = (len(result)+63) & ~63
         result.extend(bytes(new_offset-len(result)))
         result.extend(replacement)
         struct.pack_into('>III',result,toc,new_offset>>6,0,size)
         result[compression] = 0
         found.add(name)
-    if found != set(targets):
+    if found != set(replacements):
         raise ValueError('Required named frontend resources are missing')
     result.extend(bytes((-len(result))%64))
     struct.pack_into('>Q',result,24,len(result))
@@ -189,22 +208,107 @@ def build(archive, title, menu):
     return bytes(result)
 
 
+ARTWORK_PATHS = (
+    'data/fe/source/screens/bootflow/pressstart.rx2',
+    'data/fe/source/screens/demo/pressstart.rx2',
+    'data/fe/source/screens/bootflow/welcomescreen.rx2',
+    'data/fe/source/screens/bootflow/coachfrank.rx2',
+)
+ARTWORK_DIR = Path(__file__).with_name('artwork')
+
+
+def sha256(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def artwork_plan(archive, bundle=None):
+    """Verify each named arena and delta; unrelated archive data may differ."""
+    bundle = bundle or ARTWORK_DIR
+    manifest = json.loads((bundle/'manifest.json').read_text())
+    specs = manifest['targets']
+    if manifest['format'] != 'xor-zlib-v1' or set(specs) != set(ARTWORK_PATHS):
+        raise ValueError('Unsupported artwork delta manifest')
+    available = {e[0]: e for e in entries(archive)}
+    replacements, targets = {}, []
+    for name, spec in specs.items():
+        if name not in available:
+            raise ValueError(f'Required artwork resource missing: {name}')
+        _,_,_,offset,compressed,size = available[name]
+        if size != spec['size'] or not 0 < size <= 64*1024*1024:
+            raise ValueError(f'Unsupported artwork resource size: {name}')
+        raw = archive[offset:offset+(compressed or size)]
+        raw = unpack_refpack(raw,size) if compressed else raw
+        digest = sha256(raw)
+        if digest == spec['after_sha256']:
+            targets.append({'name': name, 'state': 'patched'})
+            continue
+        if digest != spec['before_sha256']:
+            raise ValueError(f'Unrecognized artwork resource: {name}')
+        # Content-addressed filenames cannot escape the bundled directory.
+        delta_hash = spec['delta_sha256']
+        if len(delta_hash) != 64 or any(c not in '0123456789abcdef' for c in delta_hash):
+            raise ValueError('Invalid artwork delta identity')
+        compressed_delta = (bundle/(delta_hash+'.xor.zlib')).read_bytes()
+        if sha256(compressed_delta) != delta_hash:
+            raise ValueError(f'Corrupt artwork delta: {name}')
+        decoder = zlib.decompressobj()
+        delta = decoder.decompress(compressed_delta, size+1)
+        if len(delta) != size or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail:
+            raise ValueError(f'Invalid artwork delta size: {name}')
+        changed = bytes(a^b for a,b in zip(raw,delta))
+        if sha256(changed) != spec['after_sha256']:
+            raise ValueError(f'Artwork delta output verification failed: {name}')
+        replacements[name] = changed
+        targets.append({'name': name, 'state': 'original'})
+    return replacements, targets
+
+
+def probe_archive(archive, bundle=None):
+    replacements, targets = artwork_plan(archive, bundle)
+    return {'state': 'original' if replacements else 'patched', 'targets': targets}
+
+
+def patch_archive(archive, bundle=None):
+    replacements, _ = artwork_plan(archive, bundle)
+    result = replace_members(archive, replacements)
+    if probe_archive(result, bundle)['state'] != 'patched':
+        raise ValueError('Artwork post-patch verification failed')
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--archive',type=Path,required=True,help='Original data/big/fedynamic.big')
-    parser.add_argument('--title',type=Path,required=True,help='Landscape 4:3 title background, without UI')
-    parser.add_argument('--menu',type=Path,required=True,help='Landscape 4:3 menu background, without UI')
-    parser.add_argument('--output',type=Path,required=True,help='New frontend archive; must not already exist')
+    parser.add_argument('--title',type=Path,help='Optional custom 4:3 title image; requires --menu')
+    parser.add_argument('--menu',type=Path,help='Optional custom 4:3 menu image; requires --title')
+    parser.add_argument('--output',type=Path,help='New frontend archive; must not already exist')
+    parser.add_argument('--check',action='store_true',help='Verify bundled artwork compatibility without writing')
     args = parser.parse_args()
-    from PIL import Image
-    images = [Image.open(p).convert('RGB') for p in (args.title,args.menu)]
-    if any(im.width*3 != im.height*4 for im in images):
-        parser.error('Both background images must be landscape 4:3')
-    result = build(args.archive.read_bytes(),*images)
+    if bool(args.title) != bool(args.menu):
+        parser.error('--title and --menu must be supplied together')
+    if args.check and args.title:
+        parser.error('--check verifies the bundled delta, not custom images')
+    if not args.check and args.output is None:
+        parser.error('--output is required unless using --check')
+    original = args.archive.read_bytes()
+    if args.check:
+        print(json.dumps(probe_archive(original),indent=2))
+        return
+    if args.title:
+        from PIL import Image
+        images = [Image.open(p).convert('RGB') for p in (args.title,args.menu)]
+        if any(im.width*3 != im.height*4 for im in images):
+            parser.error('Both background images must be landscape 4:3')
+        result = build(original,*images)
+    else:
+        result = patch_archive(original)
     with args.output.open('xb') as output:
         output.write(result)
     print(f'Created {args.output}; original archive preserved')
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except (OSError, ValueError, KeyError, IndexError, struct.error, zlib.error) as exc:
+        raise SystemExit(f'error: {exc}') from exc
