@@ -252,3 +252,10 @@ The patcher preserves cloud saves, Play Games, billing, purchases, and unrelated
 | Advent Neon shows unfinished room edges or framing | Its initial 4:3 pass is structurally verified but still requires device-side visual iteration. |
 
 For machine-readable diagnostics, use `--check --json`. For all commands, see the [main README](README.md#useful-commands).
+
+## Skate 3's included 4:3 artwork
+
+Add `--game-data "/path/to/original/fedynamic.big"` to the APK patch command to
+apply the bundled title/menu artwork delta. No separate images are required.
+The command produces a second output archive; APK installation does not copy it
+to Android. See the [backup and copy instructions](games/skate-3/README.md#bundled-43-artwork-patch).

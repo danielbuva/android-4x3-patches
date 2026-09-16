@@ -56,15 +56,16 @@ more above and below. It does not stretch the image or zoom into a 16:9 frame.
   camera choice with A does not also interrupt its preview movies.
 
 The stock title background and its highlights use proportional cover cropping.
-The optional artwork workflow below supplies extra image content instead.
+The bundled artwork patch below supplies the tested 4:3 outpaint instead.
 Other pre-rendered videos retain their proportions and can remain letterboxed. They cannot gain additional scene content. The Android
 launcher uses its existing responsive layout. This patch does not redesign
 every individual game screen or change text sizes independently.
 
 ## Build
 
-Supply your own APK and game data. No APK, ISO, game asset, or signing key is
-included in this repository.
+Supply your own APK and game data. No APK, ISO, complete game archive, standalone
+background image, or signing key is included. The artwork changes are bundled
+as source-dependent deltas.
 
 ```sh
 ./patch.sh --allow-experimental --check "/path/to/Skate3-mobile.apk"
@@ -96,29 +97,70 @@ uninstalls it for you. Preserve extracted game files outside the app's
 can delete that directory during uninstall. The original ISO can be imported
 again through the launcher.
 
-## Optional custom 4:3 backgrounds
+## Bundled 4:3 artwork patch
 
-The APK patch works with the original game assets. To use your own seamless
-4:3 artwork for the title and startup menus, the separate packer creates a copy
-of `data/big/fedynamic.big`. It replaces only the background textures in four
-named frontend resources; interactive UI and unrelated archive members stay
-intact. The title image must contain only the scene, without the logo or prompt.
-Use an outpaint that retains the original central scene so animated highlights
-still line up. Both input images must be landscape 4:3.
+The tested title outpaint and startup-menu background are included as verified
+binary deltas. **You do not need to supply title/menu images or run image
+generation.** Supply your own extracted `data/big/fedynamic.big` as the source:
 
 ```sh
-python -m pip install 'Pillow>=12'
+./patch.sh --allow-experimental "/path/to/Skate3-mobile.apk" \
+  --game-data "/path/to/original/fedynamic.big"
+```
+
+This produces the normal patched APK and
+`output/Skate3-Mobile-4x3-fedynamic.big`. Use `--game-data-output PATH` to choose
+another archive output. `--check` / `--dry-run` also verify the artwork without
+writing anything. `--force` allows replacing output files, never the inputs.
+The same arguments work with `patch.ps1` / `patch.bat`.
+
+The APK does not contain the Xbox game assets, so the archive is a separate
+output. **APK installation, including `--install-adopted`, does not copy this
+archive to the device.** Back up the original archive outside the app directory,
+stop the game, then copy the output over the extracted game's
+`data/big/fedynamic.big`. For the port's default Android location:
+
+```sh
+adb shell am force-stop chat.buku.skate3
+adb push "output/Skate3-Mobile-4x3-fedynamic.big" \
+  "/storage/emulated/0/Android/data/chat.buku.skate3/files/game/data/big/fedynamic.big"
+```
+
+When adopted storage is primary shared storage, this location uses that card.
+The ISO stays unchanged. Reimporting the ISO can restore the original archive;
+apply/copy the artwork patch again afterward.
+
+To patch just the archive, without rebuilding the APK:
+
+```sh
+python games/skate-3/backgrounds.py \
+  --archive "/path/to/original/fedynamic.big" \
+  --output "/path/to/patched/fedynamic.big"
+```
+
+This needs only Python's standard library. It verifies each named source arena
+and the reconstructed result, changes four background resources, and preserves
+all other members and interactive UI. Already-patched resources are recognized;
+reapplying does not grow the archive. Unrecognized resource revisions are
+refused. These asset hashes validate the delta's exact inputs and outputs;
+APK compatibility still uses the structural checks below.
+
+### Optional custom images
+
+You can still override the bundled artwork with your own seamless landscape
+4:3 images. This advanced path requires Pillow 12 or newer:
+
+```sh
 python games/skate-3/backgrounds.py \
   --archive "/path/to/original/fedynamic.big" \
   --title "/path/to/title-4x3.png" --menu "/path/to/menu-4x3.png" \
   --output "/path/to/custom/fedynamic.big"
 ```
 
-Back up the original archive **outside the app directory**, stop the game, and
-copy the new archive to the extracted game's `data/big/fedynamic.big`. Preserve
-the original backup for restoration. The packer refuses to overwrite an existing
-output. No original or generated game artwork is distributed by this repository.
-This optional step changes the extracted archive, never the ISO or APK.
+The title must omit UI and retain the original central scene so animated
+highlights align. Custom images are optional; the default uses the included
+deltas. See [artwork bundle details](artwork/README.md) for provenance and
+maintainer regeneration.
 
 ## Compatibility and verification
 
