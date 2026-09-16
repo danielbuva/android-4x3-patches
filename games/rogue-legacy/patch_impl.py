@@ -1,7 +1,7 @@
 """Guarded Rogue Legacy 4:3 patch with optional porter-branding cleanup.
 
-The Android port stores ``RogueLegacy.Android`` in a Xamarin XABA v1 assembly
-store.  This module resolves that assembly by name from
+The Android port stores ``RogueLegacy.Android`` and ``MonoGame.Framework`` in
+a Xamarin XABA v1 assembly store.  This module resolves assemblies by name from
 ``assemblies.manifest``, decodes its XALZ payload, and finds audited IL regions
 through invariant neighboring bytecode.  It does not depend on APK hashes,
 signatures, or fixed offsets in either the APK or the managed DLL.
@@ -26,6 +26,7 @@ MANIFEST_ENTRY = "assemblies/assemblies.manifest"
 REQUIRED_ENTRIES = (BLOB_ENTRY, MANIFEST_ENTRY)
 
 _ASSEMBLY_NAME = "RogueLegacy.Android"
+_FRAMEWORK_ASSEMBLY_NAME = "MonoGame.Framework"
 _XABA_MAGIC = 0x41424158
 _XABA_VERSION = 1
 
@@ -109,6 +110,31 @@ _REGIONS = (
                 0,
                 b"\x16",  # ldc.i4.0
                 b"\x17",  # ldc.i4.1
+            ),
+        ),
+    ),
+    # Direction input is processed before attack input, but the original code
+    # skips its shared Flip update while any action logic set remains active.
+    # Sample the held direction only on the frame a new basic attack is queued:
+    # the swing already in progress remains locked, while the next swing uses
+    # the requested direction even if the character sprite has not turned yet.
+    _Region(
+        "PlayerObj.InputControls.QueuedAttackFacing",
+        _hx("02220000000028d9150006027b750f00046f091500062c39"),
+        0x39,
+        _hx(
+            "7e731100041f166f541400062d0e7e731100041f176f541400062c09"
+            "02166f171600062b23"
+        ),
+        (
+            _Change(
+                "sample held direction when next attack is queued",
+                0,
+                _hx(
+                    "027b750f00046f091500062c747e651100046feb0500067bbf00000a"
+                    "220000d8412e167e651100046feb0500067bc000000a220000d8413348"
+                ),
+                _hx("7e731100041f0c6f541400062d2b2b71") + b"\0" * 41,
             ),
         ),
     ),
@@ -196,6 +222,16 @@ _REGIONS = (
         _hx("596ff81500060617580a06027b921300"),
         (_Change("options layout slide distance", 0, _r4(495), _r4(360)),),
     ),
+    # The quick-drop explanation is a separate ForceDraw object, so it does
+    # not follow the option rows when they settle 135 pixels lower in 4:3.
+    # Place its two lines beneath the final Back row, inside the parchment.
+    _Region(
+        "OptionsScreen.LoadContent.QuickDropHint",
+        _hx("027b9c1300040228b60b00066b"),
+        0x5,
+        _hx("73ea00000a6ffa150006027b9c13000417"),
+        (_Change("options hint below complete list", 0, _r4(590), _r4(735)),),
+    ),
     # The loading gate was authored as a 660x360 panel and scaled 2x. Rebuild
     # this fixed-size setup sequence so the gate remains ForceDraw, scales
     # proportionally to 2.75x, starts one scaled height above the viewport, and
@@ -257,7 +293,7 @@ _REGIONS = (
                     "0272bebe017073091700067d21130004"
                     "02727db1017073091700067d22130004"
                     "027b22130004220000b4426ff2150006"
-                    "027b22130004226666c63f6f06160006"
+                    "027b22130004229a99d93f6f06160006"
                     "027b22130004176f1e160006"
                 ),
             ),
@@ -283,18 +319,67 @@ _REGIONS = (
                     "0272bebe017073091700067d15130004"
                     "02727db1017073091700067d17130004"
                     "027b17130004220000b4426ff2150006"
-                    "027b17130004226666c63f6f06160006"
+                    "027b17130004229a99d93f6f06160006"
                     "027b17130004176f1e160006"
                 ),
             ),
         ),
     ),
     _Region(
+        "GameOverScreen.LayoutScreenObjects.SpotlightY",
+        _hx("027b221300047ef81700046b220000003f5a"),
+        0x2,
+        _hx("027b221300046ff115000658"),
+        (
+            _Change(
+                "death spotlight three-pixel downward offset",
+                0,
+                _i4s(40),
+                _i4s(43),
+            ),
+        ),
+    ),
+    _Region(
+        "GameOverBossScreen.LayoutScreenObjects.SpotlightY",
+        _hx("027b171300047ef81700046b220000003f5a"),
+        0x2,
+        _hx("027b171300046ff115000658"),
+        (
+            _Change(
+                "boss-death spotlight three-pixel downward offset",
+                0,
+                _i4s(40),
+                _i4s(43),
+            ),
+        ),
+    ),
+    _Region(
         "LoadingScreen.Draw",
-        _hx("027b67130004027b6d1300046ff7150006"),
-        0x5,
-        _hx("58027b6d1300046ff9150006"),
-        (_Change("preserve loading-text X after gate alignment", 0, _r4(995), _r4(1490)),),
+        _hx("041f1b3ba2000000027b711300042d67"),
+        0x54,
+        _hx("027b671300040228fd1700066fe71500062b3302"),
+        (
+            _Change(
+                "enforce right-aligned gate during final draw",
+                0,
+                _hx(
+                    "027b6d1300040228fd1700066fe7150006"
+                    "027b6c1300040228fd1700066f57090006"
+                    "027b67130004027b6d1300046ff7150006"
+                    "2200c0784458"
+                    "027b6d1300046ff9150006220000074458"
+                    "73ea00000a6ffa150006"
+                ),
+                _hx(
+                    "027b6d13000425220080f7c36ff6150006"
+                    "0228fd1700066fe7150006"
+                    "027b6c1300040228fd1700066f57090006"
+                    "027b671300042200c07844"
+                    "027b6d1300046ff9150006220000074458"
+                    "73ea00000a6ffa15000600"
+                ),
+            ),
+        ),
     ),
     # These two screen-local mobile overlays duplicate the physical controller
     # on handhelds and obscure the map/legacy choices. Suppress their draw
@@ -334,28 +419,30 @@ _REGIONS = (
             ),
         ),
     ),
-    # Projectile edge markers use a fixed 1320x720 clamp even though the live
-    # camera bounds are queried for visibility. The tiny square seen at the
-    # old lower-left safe-area corner is one of these markers, not touch button
-    # 9. Keep the width, extend its bottom clamp to the 990-line view, and dock
-    # non-top edge markers there instead of copying an in-room 720-line Y.
+    # The five rune/ability HUD sprites are authored along a row beginning at
+    # X=130 with its center at Y=690. Give the first half-scale sprite the same
+    # 20-pixel left padding as the primary HUD and move the row down by the 270
+    # newly visible pixels, while preserving spacing between all five runes.
     _Region(
-        "ProjectileIconObj.Update",
-        _hx("1200284e01000a027b06100004596b"),
-        0x15,
-        _hx("2b1d020228780600066ff9150006036f23150006"),
+        "PlayerHUDObj..ctor.RuneRow",
+        _hx(
+            "6f1e160006021b8d370100027d1f0f0004"
+            "1200"
+        ),
+        0xA,
+        _hx("28ea00000a1f230b160d2b5b"),
         (
             _Change(
-                "dock side projectile marker at bottom edge",
+                "rune HUD row left-edge anchor",
                 0,
-                _hx("3615"),
-                _hx("0000"),
+                _r4(130),
+                _r4(35),
             ),
             _Change(
-                "projectile edge-marker bottom clamp",
-                3,
-                _i4(720),
-                _i4(990),
+                "rune HUD row bottom anchor",
+                5,
+                _r4(690),
+                _r4(960),
             ),
         ),
     ),
@@ -435,15 +522,17 @@ _REGIONS = (
             ),
         ),
     ),
-    # RoomObj.SetWidth and SetHeight both recompute the pause sprite scale. Use
-    # the live display height, plus enough overscan to cover the opposite edge
-    # after applying the top anchor. The two identical methods are guarded as
-    # one compound region so neither match can be mistaken for the other.
+    # RoomObj.SetWidth and SetHeight both recompute the pause sprite scale.
+    # Scale its height to twice the live viewport: the one-source-pixel top
+    # anchor consumes one fifth of that height on Blank_Sprite, still leaving
+    # 160% below the room origin and reliable coverage at both edges. This
+    # formula does not increase the methods' fixed evaluation-stack depth. The
+    # two identical methods are guarded together so they cannot be confused.
     _Region(
         "RoomObj.SetWidth+SetHeight",
         _hx("027bee1000046ff01500065b6b"),
-        0x68,
-        _hx("58027bee1000046ff11500065b6b"),
+        0x69,
+        _hx("027bee1000046ff11500065b6b"),
         (
             _Change(
                 "pause dimmer height from SetWidth",
@@ -452,10 +541,10 @@ _REGIONS = (
                 _hx("7ef917000400"),
             ),
             _Change(
-                "pause dimmer vertical overscan from SetWidth",
+                "pause dimmer proportional overscan from SetWidth",
                 0x6,
-                _i4s(20),
-                _i4s(127),
+                _hx("1f1458"),
+                _hx("185a00"),
             ),
             _Change(
                 "pause dimmer height from SetHeight",
@@ -464,10 +553,10 @@ _REGIONS = (
                 _hx("7ef917000400"),
             ),
             _Change(
-                "pause dimmer vertical overscan from SetHeight",
+                "pause dimmer proportional overscan from SetHeight",
                 0x66,
-                _i4s(20),
-                _i4s(127),
+                _hx("1f1458"),
+                _hx("185a00"),
             ),
         ),
     ),
@@ -558,6 +647,60 @@ _REGIONS = (
                 b"\x02",
                 b"\x2a",
                 optional=True,
+            ),
+        ),
+    ),
+)
+
+# This MonoGame Android build records analog GAS/BRAKE trigger values in
+# GamePadTriggers, but GamePadState.GetVirtualButtons() only returns ordinary,
+# thumb-stick, and D-pad bits. Rogue Legacy maps dash to Buttons.LeftTrigger and
+# Buttons.RightTrigger, so the analog values can never satisfy its button test.
+# The D-pad expansion replaced below is redundant on Android: both platform and
+# touch-created GamePadState instances already carry those bits in Buttons.
+# Reuse that space to add trigger bits above a 50% threshold.
+_FRAMEWORK_REGIONS = (
+    _Region(
+        "GamePadState.GetVirtualButtons",
+        _hx(
+            "0228910900067b840500040a06022895090006"
+            "7bb2050004600a"
+        ),
+        0x56,
+        _hx("46032d02162a02289c090006035f03fe"),
+        (
+            _Change(
+                "analog triggers participate in button tests",
+                0,
+                _hx(
+                    "0228930900060b1201287c0900061733040618600a"
+                    "0228930900060b120128820900061733040617600a"
+                    "0228930900060b1201287e090006173304061a600a"
+                    "0228930900060b12012880090006173304061e600a062a"
+                ),
+                _hx(
+                    "0228970900060b120128b2090006220000003f3608062000008000600a"
+                    "0228970900060b120128b4090006220000003f3608062000004000600a"
+                    "062a"
+                    "0000000000000000000000000000000000000000000000000000"
+                ),
+            ),
+        ),
+    ),
+    # GetVirtualButtons no longer needs its GamePadDPad local after removing
+    # the redundant D-pad expansion. Re-type that local as GamePadTriggers so
+    # the replacement can use the public Left/Right property getters.
+    _Region(
+        "GamePadState.GetVirtualButtons.LocalSignature",
+        _hx("070211833c11"),
+        0x2,
+        _hx("0e070411834811835411835c118360"),
+        (
+            _Change(
+                "trigger getter local type",
+                0,
+                _hx("8354"),
+                _hx("8360"),
             ),
         ),
     ),
@@ -853,30 +996,68 @@ def _discover_assembly(
     return targets, actions
 
 
-def _manifest_index(data: bytes) -> int:
+def _discover_framework(
+    data: bytes | bytearray,
+) -> tuple[list[dict[str, Any]], list[tuple[int, bytes, bytes]]]:
+    """Find the optional MonoGame analog-trigger compatibility repair."""
+
+    targets: list[dict[str, Any]] = []
+    actions: list[tuple[int, bytes, bytes]] = []
+    for region in _FRAMEWORK_REGIONS:
+        matches = _locate_region(data, region)
+        if len(matches) != 1:
+            targets.append(
+                {
+                    "name": region.name,
+                    "state": "ambiguous" if len(matches) > 1 else "unsupported",
+                    "matches": len(matches),
+                }
+            )
+            continue
+        base = matches[0]
+        for change in region.changes:
+            offset = base + change.relative
+            actual = bytes(data[offset : offset + len(change.original)])
+            state = _value_state(actual, change.original, change.patched)
+            targets.append(
+                {
+                    "name": change.name,
+                    "method": region.name,
+                    "state": state,
+                    "matches": 1,
+                }
+            )
+            if state in ("original", "patched"):
+                actions.append((offset, change.original, change.patched))
+    return targets, actions
+
+
+def _manifest_index(data: bytes, assembly_name: str = _ASSEMBLY_NAME) -> int:
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise PatchError("assemblies.manifest is not UTF-8 text") from exc
     pattern = re.compile(
         r"^0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+(\d+)\s+(\d+)\s+"
-        + re.escape(_ASSEMBLY_NAME)
+        + re.escape(assembly_name)
         + r"\s*$",
         re.MULTILINE,
     )
     matches = pattern.findall(text)
     if len(matches) != 1:
         raise PatchError(
-            f"assemblies.manifest has {len(matches)} {_ASSEMBLY_NAME!r} mappings"
+            f"assemblies.manifest has {len(matches)} {assembly_name!r} mappings"
         )
     blob_id, blob_index = (int(value, 10) for value in matches[0])
     if blob_id != 0:
-        raise PatchError(f"{_ASSEMBLY_NAME} is in unsupported blob ID {blob_id}")
+        raise PatchError(f"{assembly_name} is in unsupported blob ID {blob_id}")
     return blob_index
 
 
 def _assembly_from_store(
-    blob: bytes | bytearray, manifest: bytes
+    blob: bytes | bytearray,
+    manifest: bytes,
+    assembly_name: str = _ASSEMBLY_NAME,
 ) -> tuple[bytes, dict[str, int]]:
     if len(blob) < 20:
         raise PatchError("assemblies.blob is truncated")
@@ -892,7 +1073,7 @@ def _assembly_from_store(
     descriptor_end = 20 + entry_count * 24
     if descriptor_end > len(blob):
         raise PatchError("XABA descriptor table is truncated")
-    assembly_index = _manifest_index(manifest)
+    assembly_index = _manifest_index(manifest, assembly_name)
     if not 0 <= assembly_index < entry_count:
         raise PatchError("assembly manifest index is outside the XABA descriptor table")
     descriptor_offset = 20 + assembly_index * 24
@@ -937,8 +1118,13 @@ def _assembly_from_store(
     }
 
 
-def _pack_assembly(blob: bytes, manifest: bytes, patched_assembly: bytes) -> bytes:
-    _old, info = _assembly_from_store(blob, manifest)
+def _pack_assembly(
+    blob: bytes,
+    manifest: bytes,
+    patched_assembly: bytes,
+    assembly_name: str = _ASSEMBLY_NAME,
+) -> bytes:
+    _old, info = _assembly_from_store(blob, manifest, assembly_name)
     try:
         import lz4.block
 
@@ -967,10 +1153,54 @@ def _pack_assembly(blob: bytes, manifest: bytes, patched_assembly: bytes) -> byt
     )
     struct.pack_into("<I", result, info["descriptor_offset"] + 4, len(stored))
 
-    decoded, verify_info = _assembly_from_store(result, manifest)
+    decoded, verify_info = _assembly_from_store(result, manifest, assembly_name)
     if decoded != patched_assembly or verify_info["stored_size"] != len(stored):
         raise PatchError("repacked managed assembly failed its read-back check")
     return bytes(result)
+
+
+def _patch_framework_if_recognized(
+    blob: bytes, manifest: bytes
+) -> tuple[bytes, bool]:
+    """Repair analog trigger buttons when this known MonoGame body is present.
+
+    This is a compatibility fix rather than a core 4:3 target. A different or
+    already-correct framework must not make an otherwise compatible APK fail.
+    """
+
+    try:
+        assembly, _info = _assembly_from_store(
+            blob, manifest, _FRAMEWORK_ASSEMBLY_NAME
+        )
+    except Exception:
+        return blob, False
+    targets, actions = _discover_framework(assembly)
+    if _overall(targets) in ("unsupported", "ambiguous"):
+        return blob, False
+    patched = bytearray(assembly)
+    changed = False
+    for offset, original, replacement in actions:
+        actual = bytes(patched[offset : offset + len(original)])
+        if actual == replacement:
+            continue
+        if actual != original:
+            return blob, False
+        patched[offset : offset + len(original)] = replacement
+        changed = True
+    if not changed:
+        return blob, False
+    verify_targets, _ = _discover_framework(patched)
+    if _overall(verify_targets) != "patched":
+        raise PatchError("MonoGame analog-trigger postcondition failed")
+    return (
+        _pack_assembly(
+            blob,
+            manifest,
+            bytes(patched),
+            _FRAMEWORK_ASSEMBLY_NAME,
+        ),
+        True,
+    )
 
 
 def _probe_pair(blob: bytes, manifest: bytes) -> dict[str, Any]:
@@ -1020,7 +1250,7 @@ def probe(extracted: dict[str, Path]) -> dict[str, Any]:
 
 
 def apply(extracted: dict[str, Path], output_dir: Path) -> dict[str, Path]:
-    """Patch recognized original targets and emit one rebuilt assembly-store entry."""
+    """Patch recognized targets and emit one rebuilt assembly-store entry."""
 
     initial = probe(extracted)
     if initial["state"] in ("unsupported", "ambiguous"):
@@ -1041,13 +1271,16 @@ def apply(extracted: dict[str, Path], output_dir: Path) -> dict[str, Path]:
             raise PatchError("managed target changed during patch application")
         patched[offset : offset + len(original)] = replacement
         changed = True
-    if not changed:
-        return {}
-    verify_targets, _ = _discover_assembly(patched)
-    if _overall(verify_targets) != "patched":
-        raise PatchError("managed assembly postcondition failed")
+    rebuilt = blob
+    if changed:
+        verify_targets, _ = _discover_assembly(patched)
+        if _overall(verify_targets) != "patched":
+            raise PatchError("managed assembly postcondition failed")
+        rebuilt = _pack_assembly(blob, manifest, bytes(patched))
 
-    rebuilt = _pack_assembly(blob, manifest, bytes(patched))
+    rebuilt, framework_changed = _patch_framework_if_recognized(rebuilt, manifest)
+    if not changed and not framework_changed:
+        return {}
     verify = _probe_pair(rebuilt, manifest)
     if verify["state"] != "patched":
         raise PatchError(f"assembly-store postcondition failed: {verify['state']}")

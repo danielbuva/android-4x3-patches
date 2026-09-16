@@ -295,29 +295,41 @@ def test_rogue_legacy_production_targets_are_guarded_and_length_preserving() -> 
     )
     assert len(changes["top-anchored death spotlight vertical scale"].original) == 76
     assert len(changes["top-anchored death spotlight vertical scale"].patched) == 76
-    assert rogue._r4(1.55) in changes[
+    assert rogue._r4(1.7) in changes[
         "top-anchored death spotlight vertical scale"
     ].patched
     assert len(changes["top-anchored boss-death spotlight vertical scale"].original) == 76
     assert len(changes["top-anchored boss-death spotlight vertical scale"].patched) == 76
-    assert rogue._r4(1.55) in changes[
+    assert rogue._r4(1.7) in changes[
         "top-anchored boss-death spotlight vertical scale"
     ].patched
-    assert changes["preserve loading-text X after gate alignment"].original == rogue._r4(
-        995
-    )
-    assert changes["preserve loading-text X after gate alignment"].patched == rogue._r4(
-        1490
-    )
+    assert changes[
+        "death spotlight three-pixel downward offset"
+    ].patched == rogue._i4s(43)
+    assert changes[
+        "boss-death spotlight three-pixel downward offset"
+    ].patched == rogue._i4s(43)
+    gate_draw = changes["enforce right-aligned gate during final draw"]
+    assert len(gate_draw.original) == 84
+    assert len(gate_draw.patched) == 84
+    assert rogue._r4(-495) in gate_draw.patched
+    assert rogue._r4(995) in gate_draw.patched
     assert changes["hide lineage touch stick"].patched == b"\0" * 6
     assert changes["hide lineage touch select button"].patched == b"\0" * 18
     assert changes["hide map touch buttons"].patched == b"\0" * 12
-    assert changes["dock side projectile marker at bottom edge"].original == bytes.fromhex(
-        "3615"
+    assert changes["rune HUD row left-edge anchor"].original == rogue._r4(130)
+    assert changes["rune HUD row left-edge anchor"].patched == rogue._r4(35)
+    assert changes["rune HUD row bottom anchor"].original == rogue._r4(690)
+    assert changes["rune HUD row bottom anchor"].patched == rogue._r4(960)
+    assert changes["options hint below complete list"].original == rogue._r4(590)
+    assert changes["options hint below complete list"].patched == rogue._r4(735)
+    queued_facing = changes["sample held direction when next attack is queued"]
+    assert len(queued_facing.original) == 57
+    assert len(queued_facing.patched) == 57
+    assert queued_facing.patched.startswith(
+        bytes.fromhex("7e731100041f0c6f541400062d2b2b71")
     )
-    assert changes["dock side projectile marker at bottom edge"].patched == b"\0\0"
-    assert changes["projectile edge-marker bottom clamp"].original == rogue._i4(720)
-    assert changes["projectile edge-marker bottom clamp"].patched == rogue._i4(990)
+    assert queued_facing.patched[16:] == b"\0" * 41
     assert len(changes["pause dimmer top anchor"].original) == 24
     assert len(changes["pause dimmer top anchor"].patched) == 24
     assert changes["pause dimmer height from SetWidth"].patched == bytes.fromhex(
@@ -326,11 +338,11 @@ def test_rogue_legacy_production_targets_are_guarded_and_length_preserving() -> 
     assert changes["pause dimmer height from SetHeight"].patched == bytes.fromhex(
         "7ef917000400"
     )
-    assert changes["pause dimmer vertical overscan from SetWidth"].original == rogue._i4s(
-        20
+    assert changes["pause dimmer proportional overscan from SetWidth"].original == bytes.fromhex(
+        "1f1458"
     )
-    assert changes["pause dimmer vertical overscan from SetWidth"].patched == rogue._i4s(
-        127
+    assert changes["pause dimmer proportional overscan from SetWidth"].patched == bytes.fromhex(
+        "185a00"
     )
     exit_rows = changes["preserve centered option rows on exit"]
     assert len(exit_rows.original) == 22
