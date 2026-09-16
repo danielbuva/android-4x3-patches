@@ -391,6 +391,22 @@ def test_full_canvas_overlay_classifier_rejects_text_small_panels_and_invalid_ge
     spinner=[(1110,600),(1170,600),(1170,660),(1110,660)]
     assert trial(spinner,24,(1,1,1),menu=1)==4
     assert trial(spinner,24,(1,1,1))==0
+    # The two swirl sprites rotate independently. Neither may fall back to
+    # the old safe area between the axis-aligned animation frames.
+    import math
+    for angle in range(0, 360, 5):
+        for radius, phase in ((30, angle), (24, -angle + 17)):
+            sine, cosine = math.sin(math.radians(phase)), math.cos(math.radians(phase))
+            rotated = [(1140+x*cosine-y*sine, 630+x*sine+y*cosine)
+                       for x,y in [(-radius,-radius),(radius,-radius),
+                                   (radius,radius),(-radius,radius)]]
+            for points in (rotated, [rotated[i] for i in (0,1,2,0,2,3)]):
+                assert trial(points,24,(1,1,1),menu=1)==4
+                assert trial(points,24,(1,1,1),warmup=1)==4
+                assert trial(points,24,(1,1,1))==0
+                assert trial(points,24,(1,1,1),menu=1,video=1)==0
+    assert trial([(x-500,y) for x,y in spinner],24,(1,1,1),menu=1)==0
+    assert trial(spinner,16,(1,1,1),menu=1)==0
     world = [2,0,0,0, 0,2,0,0, 0,0,1,0, 0,0,0,1]
     assert trial([(x/2,y/2) for x,y in quad], world=world) == 1
 

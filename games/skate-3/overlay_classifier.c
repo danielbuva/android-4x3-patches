@@ -168,7 +168,11 @@ int full_canvas_overlay(const unsigned char *draw,unsigned movie_state,
     if(title && ((width<=640 && height<=160 && b.l>=100 && b.r<=620 && b.t>=70 && b.b<240) ||
        (stride==24 && tw==32 && th==32 && width<=640 && height<=400 &&
         (b.l+b.r)*.5f>=100 && (b.l+b.r)*.5f<=620 && (b.t+b.b)*.5f>=70 && (b.t+b.b)*.5f<240)))return 3;
-    if((warmup||in_menu) && stride==24 && b.rect && b.l>=1024 && b.r<=1282 && b.t>=576 && b.b<=722 &&
+    /* Both loading swirls share this corner, but rotate independently. Their
+     * vertices need not occupy the corners of their axis-aligned bounds. */
+    unsigned count=*(const unsigned *)(draw+4);
+    if(!video && (warmup||in_menu) && stride==24 && (count==4 || count==6) &&
+        b.l>=1024 && b.r<=1282 && b.t>=576 && b.b<=722 &&
         width>=12 && width<=128 && height>=12 && height<=128 && width<height*2 && height<width*2)return 4;
     /* Stock title highlights follow the same cover crop as their background.
      * With outpainted art the original center is retained, so no crop is used. */

@@ -49,7 +49,7 @@ more above and below. It does not stretch the image or zoom into a 16:9 frame.
   grain layers to the full screen. Small black panels remain panels.
 - Enlarge the difficulty/camera startup dialogs and their preview videos by
   50% together. Anchor the title logo, prompt, and glow effects near the top,
-  and loading spinner near the bottom. Keep intentionally off-canvas prompts
+  and both independently rotating loading swirls near the bottom. Keep intentionally off-canvas prompts
   outside the expanded view without removing their actions.
 - Keep 4:3 output when the native settings screen reapplies its preferences.
 - Reserve the port's global movie-skip shortcut for Start, so confirming a
