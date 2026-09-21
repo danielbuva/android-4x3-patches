@@ -1,0 +1,10 @@
+{
+  "id": "afterimage",
+  "display_name": "Afterimage",
+  "package_names": ["com.aurogon.Afterimage"],
+  "engine": "Unreal Engine 4.27.2 / AArch64",
+  "status": "experimental",
+  "tested_versions": ["1.0.4 (50), arm64-v8a"],
+  "required_entries": ["lib/arm64-v8a/libUE4.so", "resources.arsc"],
+  "output_name": "Afterimage-v1.0.4-4x3.apk"
+}

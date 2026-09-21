@@ -126,3 +126,15 @@ signature verification for reproduced outputs, a prohibited-artifact scan, and
 `git diff --check`. A release must contain no APK/APKS/AAB files, extracted
 commercial assets, native or managed game binaries, private signing material,
 or machine-specific paths.
+
+### Afterimage 1.0.4 (50)
+
+The [Afterimage module](games/afterimage/README.md) preserves horizontal camera
+coverage and uses the full viewport. Original and modified ARM64 native states,
+partial states, unknown revisions, executable mapping, unique instruction
+contexts, and Android theme insertion are covered by proprietary-free tests.
+The original-aspect output reached opening gameplay; the camera trial revealed
+world content in the former top and bottom borders at 1280×960. Existing HUD
+edge anchors remain intact. macOS source-to-signed-output reproduction was
+performed. Complete gameplay, translated UI, and touch coverage remain for the
+owner to verify. Windows commercial-APK reproduction was not performed.

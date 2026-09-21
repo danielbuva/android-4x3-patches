@@ -19,6 +19,7 @@ def test_publishable_registry_loads_every_declared_game_module() -> None:
 
     assert {game.id for game in registry.games} == {
         "advent-neon",
+        "afterimage",
         "am2r",
         "baba-is-you",
         "blasphemous",
