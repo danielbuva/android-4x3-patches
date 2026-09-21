@@ -2,7 +2,9 @@
 
 This is an opt-in investigation, **not a finished 4:3 conversion**. Menus,
 fixed artwork, HUD/touch layout, render effects and special scenes are not
-certified. It is deliberately absent from the normal game registry. ARMv7
+certified. **Updated assets are needed for a complete 4:3 presentation.**
+The delivered experiment preserves the original artwork; it does not scale or
+crop background layers. It is deliberately absent from the normal game registry. ARMv7
 remains unchanged. Do not distribute the generated APK.
 
 ## Reproduce on macOS or Windows
@@ -73,17 +75,3 @@ The `.probe` section is 986 bytes, SHA-256
 Other compiler versions may produce different code and need fresh review and
 verification; simply changing the expected hash is not a compatibility fix.
 No compiler is needed to apply the reviewed payload with Python.
-
-## Optional Forest Follies artwork trial
-
-`--fit-forest-background` additionally enlarges the opening meadow decoration
-uniformly to 150%, allowing cropping of that decorative layer. Its upper edge
-stays fixed and the layer extends downward to cover the newly visible strip.
-Only one leaf object with exactly a Transform and SpriteRenderer is changed;
-it has no children, collider or script. The camera position, gameplay terrain,
-actors, sky, overworld and other scenes are untouched. The scene entry has
-independent source/output hash guards and a unique named-object check.
-
-This is a narrow artwork experiment, not a fit for every background or every
-part of Forest Follies. Other finite layers and foreground artwork may still
-show edges. Use only if background-only cropping is acceptable to you.

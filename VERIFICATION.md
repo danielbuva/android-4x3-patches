@@ -113,7 +113,8 @@ Cuphead 1.0.2 (build 4) now has an opt-in ARM64 camera probe. Live A/B geometry
 and screenshots establish unchanged horizontal coverage, proportional rendering
 and one-third more vertical coverage at 1280×960. The overworld also fills 4:3.
 Finite background edges, UI, overlays and full-game compatibility remain
-unfinished. The original-aspect APK and camera experiment were built/signed on
+unfinished; updated assets are needed for complete 4:3 presentation. A narrow
+artwork experiment was reverted, leaving all original artwork unchanged. The original-aspect APK and camera experiment were built/signed on
 macOS; commercial-APK rebuilding on Windows and ARMv7 execution are untested.
 See the [investigation record](games/cuphead/README.md) for exact measurements,
 source guards and the limitations of the earlier rejected diagnostic.

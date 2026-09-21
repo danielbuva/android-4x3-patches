@@ -56,21 +56,3 @@ def test_projection_preserves_horizontal_and_pixel_scale():
         assert 2 / m00 == pytest.approx(width)
         assert 2 / m11 == pytest.approx(height * 4 / 3)
         assert 1280 / width == pytest.approx(960 / (2 / m11))
-
-
-def test_forest_artwork_fit_preserves_proportions_and_upper_edge():
-    forest_spec = importlib.util.spec_from_file_location('cuphead_forest', PATH.with_name('forest.py'))
-    forest = importlib.util.module_from_spec(forest_spec)
-    forest_spec.loader.exec_module(forest)
-    tree = {'m_Children':[], 'm_LocalScale':{'x':1.,'y':1.,'z':1.},
-            'm_LocalPosition':{'x':624.,'y':-110.,'z':0.}}
-    half = 137 / 0.40217500925064087 / 2
-    fitted = forest.fit_transform(tree)
-    assert fitted['m_LocalScale']['x'] == fitted['m_LocalScale']['y'] == 1.5
-    assert fitted['m_LocalPosition']['y'] + half*1.5 == pytest.approx(-110+half)
-    assert tree['m_LocalPosition']['y'] == -110
-    tree['m_Children'] = [123]
-    with pytest.raises(probe.PatchError, match='Unexpected'):
-        forest.fit_transform(tree)
-    with pytest.raises(probe.PatchError, match='Unsupported'):
-        forest.patch(b'unrecognized scene')

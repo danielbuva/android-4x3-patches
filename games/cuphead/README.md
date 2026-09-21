@@ -3,7 +3,7 @@
 A second ARM64 experiment demonstrates a true 4:3 viewport with the original
 16:9 horizontal world coverage and one-third more vertical coverage. A
 reproducible [opt-in camera probe](probe/README.md) is available. **This is not
-a finished whole-game 4:3 patch** and Cuphead remains outside the normal registry.
+a finished whole-game 4:3 patch: updated assets are needed** and Cuphead remains outside the normal registry.
 
 ## Investigated source
 
@@ -77,8 +77,10 @@ was impossible. This investigation supersedes that earlier conclusion.
 - Finite artwork can end inside the taller viewport. The opening meadow exposes
   its lower edge. Decorative backgrounds may be scaled uniformly and cropped
   separately, but that must not move colliders, platforms, enemies or the player.
-  The camera-only default leaves artwork unchanged. An optional Forest Follies
-  meadow trial fits one decorative layer; it does not solve every background.
+  The delivered camera experiment leaves all artwork unchanged. A selective
+  meadow fit was tested and reverted because consistent presentation would
+  require reworking many layers across the levels. Updated assets are needed
+  for a complete 4:3 presentation.
 - Keep the current camera positioning; there is no bottom-alignment change.
 - HUD, menus, subtitles, touch anchors and fixed-aspect story scenes have not
   received the required separate treatment. A death overlay still covers only

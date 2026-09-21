@@ -89,7 +89,6 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('apk', type=Path)
     parser.add_argument('--check', action='store_true')
-    parser.add_argument('--fit-forest-background', action='store_true', help='Experimental fit of the opening meadow decoration only')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args(argv)
     try:
@@ -98,11 +97,6 @@ def main(argv=None):
         if args.output and (args.output.exists() or args.output.resolve() == args.apk.resolve()):
             raise PatchError('Output must be a new file, separate from the source')
         result, already = inspect(args.apk)
-        artwork = None
-        if args.fit_forest_background:
-            import forest
-            with zipfile.ZipFile(args.apk) as archive:
-                artwork = forest.patch(archive.read(forest.ENTRY))
         print('Compatible ARM64 camera probe' + (' (already applied)' if already else ''))
         if args.check:
             return 0
@@ -112,12 +106,7 @@ def main(argv=None):
             library = work/'libil2cpp.so'
             library.write_bytes(result)
             unsigned, aligned, signed = (work/name for name in ('unsigned.apk','aligned.apk','signed.apk'))
-            replacements = {ENTRY: library}
-            if artwork is not None:
-                scene = work/'level41'
-                scene.write_bytes(artwork)
-                replacements[forest.ENTRY] = scene
-            repack_with_optional_branding(ROOT, args.apk, unsigned, replacements)
+            repack_with_optional_branding(ROOT, args.apk, unsigned, {ENTRY: library})
             align_apk(unsigned, aligned)
             sign_apk(aligned, signed)
             verify_zip(signed, full=True, allow_signatures=True)
