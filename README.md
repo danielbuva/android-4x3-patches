@@ -46,6 +46,8 @@ The tested Android versions of **Brotato**, **Dead Cells**, **DREDGE**, and **Th
 
 ### Deferred games
 
+**Cuphead** (`com.gabedeveloper.cuphead`, investigated with 1.0.2 / build 4) is deferred. The camera prototype cropped fixed artwork and did not establish expanded gameplay with complete 4:3 UI handling. See the [source checksum, specific blockers, and verification limits](games/cuphead/README.md). No Cuphead patch is registered or released.
+
 **GRID Legends** (`com.feralinteractive.gridlegends_android`, tested with 1.1.4RC7) is deferred and is not registered with the patcher. The available source bundle contains an injected Fiveplay startup wrapper that exits on the physical test device after four seconds, including before any 4:3 modification. Its source and research builds are retained outside this repository for a later compatibility investigation.
 
 ## Prerequisites

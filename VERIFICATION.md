@@ -109,6 +109,13 @@ Android builds, so this repository has no modules for them. GRID Legends is
 deferred because the available source wrapper exited before game startup even
 without a 4:3 modification.
 
+Cuphead 1.0.2 (build 4) is also deferred: a limited ARM64 diagnostic exposed
+fixed-artwork cropping and did not establish a compliant expanded gameplay
+layout. The original-aspect output passed macOS archive/signature checks and
+a limited physical-device startup through the first playable room. The
+diagnostic was rejected and uninstalled. See the [investigation record](games/cuphead/README.md)
+for the input checksum and untested areas.
+
 ## Release checks
 
 Before a release, maintainers run the full proprietary-free test suite, ZIP and
