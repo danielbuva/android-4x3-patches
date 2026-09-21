@@ -1,0 +1,74 @@
+game_globals = 0x1dc86e0;
+gamepads = 0x1d99188;
+gamepad_count = 0x1d99184;
+find_variable = 0x9890cc;
+read_save = 0x97f260;
+write_save = 0x97ef90;
+free_save = 0xb47d44;
+get_instance_variable = 0x995df0;
+axis_value = 0x981774;
+point_direction = 0x9d3660;
+var_p = 0x1a9c578;
+var_inputP1 = 0x1a98c48;
+var_inputP2 = 0x1a98c58;
+var_usingGamepad = 0x1aa2568;
+var_gamepadSlot = 0x1a97218;
+var_aimDir = 0x1a90148;
+
+pad_pressed = 0x9812a8;
+mouse_pressed = 0x9d5840;
+legacy_call = 0x9ae2a8;
+create_string = 0x9b51d0;
+free_value = 0x8714ec;
+font_language = 0x1179f44;
+text_caps = 0x117a7d8;
+draw_halign = 0x9e9130;
+draw_valign = 0x9e917c;
+var_state = 0x1aa0a48;
+var_S_CONTROLS = 0x1a9dda8;
+var_largeMenuX = 0x1a99568;
+var_largeMenuY = 0x1a99578;
+var_largeMenuBGHei = 0x1a99548;
+var_HView_0 = 0x1a987e8;
+fn_gui_width = 0x1aaf118;
+fn_gui_height = 0x1aaf128;
+fn_mouse_x = 0x1aaeec8;
+fn_mouse_y = 0x1aaeed8;
+pad_update_continue = 0x981824;
+character_input_continue = 0xe52944;
+menu_draw_continue = 0x14451fc;
+menu_step_continue = 0x141cb1c;
+
+pad_down = 0x981214;
+var_room = 0x1aa3698;
+draw_sprite = 0x9ea004;
+
+var_dir = 0x1a947e8;
+fire_light_continue = 0xde32cc;
+fire_rail_continue = 0xe2a0a8;
+fire_blast_continue = 0xe34cb4;
+weapon_crystalgun_continue = 0xde06a0;
+weapon_railgunlight_continue = 0xde3098;
+weapon_railgunscope_continue = 0xdfb13c;
+weapon_railgunzap_continue = 0xe07874;
+weapon_railgunauto_continue = 0xe11b68;
+weapon_railgun_continue = 0xe26674;
+weapon_railgunblast_continue = 0xe310cc;
+weapon_pistol_continue = 0xe1ef3c;
+weapon_pistolzeliska_continue = 0xe2222c;
+weapon_diamondblunderbuss_continue = 0xe3b5a0;
+weapon_diamondshotgun_continue = 0xe3e61c;
+weapon_diamondcharge_continue = 0xdf7c9c;
+weapon_scuttlerpistol_continue = 0xdef1f8;
+weapon_tracerpistol_continue = 0xdf3688;
+weapon_rifle_continue = 0xdee930;
+weapon_burstrifle_continue = 0xded0c8;
+weapon_chargeshot_continue = 0xdee2a0;
+
+
+var_gunphase = 0x1a97b18;
+movement_idle = 0x1de0bc8;
+basic_movement_continue = 0xdadd38;
+
+var_jdis = 0x1a99108;
+refresh_facing = 0xe6acc0;

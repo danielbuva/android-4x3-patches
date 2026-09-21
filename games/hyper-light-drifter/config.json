@@ -1,0 +1,10 @@
+{
+  "id": "hyper-light-drifter",
+  "display_name": "Hyper Light Drifter",
+  "package_names": ["com.abylight.HyperLightDrifter"],
+  "engine": "GameMaker YYC / AArch64",
+  "status": "experimental",
+  "tested_versions": ["1.1.99 (1001099), arm64-v8a"],
+  "required_entries": ["lib/arm64-v8a/libyoyo.so", "assets/assets/game.droid"],
+  "output_name": "Hyper-Light-Drifter-v1.1.99-4x3.apk"
+}
