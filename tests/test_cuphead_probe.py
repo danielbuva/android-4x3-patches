@@ -11,7 +11,7 @@ spec.loader.exec_module(probe)
 
 
 def test_payload_is_reviewed_own_code():
-    assert len(probe.payload()) == 986
+    assert len(probe.payload()) == 5151
 
 
 def test_rejects_unknown_library():
@@ -29,13 +29,15 @@ def test_native_injection_preserves_load_segments_and_is_idempotent(monkeypatch)
     struct.pack_into('<IIQQQQQQ', data, 64, 1, 5, 0, 0, 0, 512, 512, 65536)
     struct.pack_into('<IIQQQQQQ', data, 120, 4, 4, 400, 400, 400, 16, 16, 4)
     data[480:484] = bytes.fromhex('01000014')
-    monkeypatch.setattr(probe, 'HOOK', 480)
+    data[484:488] = bytes.fromhex('00000094')
+    monkeypatch.setattr(probe, 'HOOKS', [dict(address='0x1e0', target='0x10000', before='01000014', symbol='entry', link=False), dict(address='0x1e4', target='0x10004', before='00000094', symbol='call', link=True)])
     monkeypatch.setattr(probe, 'VADDR', 65536)
     monkeypatch.setattr(probe, 'SOURCE', probe.digest(data))
     expected = bytearray(data)
     code = probe.payload()
     struct.pack_into('<IIQQQQQQ', expected, 120, 1, 5, 65536, 65536, 65536, len(code), len(code), 65536)
     struct.pack_into('<I', expected, 480, 0x14000000 | ((65536-480)//4))
+    struct.pack_into('<I', expected, 484, 0x94000000 | ((65540-484)//4))
     expected.extend(bytes(65536-len(expected)))
     expected.extend(code)
     monkeypatch.setattr(probe, 'PATCHED', probe.digest(expected))
@@ -56,3 +58,19 @@ def test_projection_preserves_horizontal_and_pixel_scale():
         assert 2 / m00 == pytest.approx(width)
         assert 2 / m11 == pytest.approx(height * 4 / 3)
         assert 1280 / width == pytest.approx(960 / (2 / m11))
+
+
+def test_hook_guard_rejects_different_instruction(monkeypatch):
+    data = bytes(512)
+    monkeypatch.setattr(probe, 'SOURCE', probe.digest(data))
+    with pytest.raises(probe.PatchError, match='ARM64 ELF'):
+        probe.inject(data)
+
+
+def test_cropped_mode_preserves_scale_and_map_remains_expanded():
+    # Conventional orthographic framing: cropping loses width, not proportions.
+    height = 720 / 0.811
+    cropped_width = height * 4 / 3
+    assert 1280 / cropped_width == pytest.approx(960 / height)
+    assert cropped_width / (height * 16 / 9) == pytest.approx(0.75)
+    assert 12.8 / 9.6 == pytest.approx(1280 / 960)

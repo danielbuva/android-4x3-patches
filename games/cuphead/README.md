@@ -1,8 +1,10 @@
-# Cuphead — expanded gameplay camera experiment
+# Cuphead — experimental display modes
 
-A second ARM64 experiment demonstrates a true 4:3 viewport with the original
-16:9 horizontal world coverage and one-third more vertical coverage. A
-reproducible [opt-in camera probe](probe/README.md) is available. **This is not
+The ARM64 experiment provides original 16:9, expanded 4:3 and cropped 4:3
+choices in Settings → Video. Expanded preserves the original horizontal world
+coverage and reveals one-third more vertically. Both 4:3 modes share the
+expanded overworld and a full-screen UI safe area. A reproducible
+[opt-in patch](probe/README.md) is available. **This is not
 a finished whole-game 4:3 patch: updated assets are needed** and Cuphead remains outside the normal registry.
 
 ## Investigated source
@@ -16,8 +18,8 @@ a finished whole-game 4:3 patch: updated assets are needed** and Cuphead remains
 | APK size | 1,946,927,147 bytes |
 | APK SHA-256 | `e73b2dd9877b30f8d511b10fc3040e64fa2061487a25b0ec463269802505a70f` |
 
-The checksum identifies the investigated input; it does not establish support
-for this or any other Cuphead APK. Both Windows and macOS launchers reject the
+The checksum identifies the investigated input; compatibility additionally
+requires the native library, metadata and scene fingerprints checked by the opt-in patch. Both Windows and macOS launchers reject the
 unregistered package. `--allow-experimental` does not enable Cuphead.
 
 ## Camera findings
@@ -77,15 +79,18 @@ was impossible. This investigation supersedes that earlier conclusion.
 - Finite artwork can end inside the taller viewport. The opening meadow exposes
   its lower edge. Decorative backgrounds may be scaled uniformly and cropped
   separately, but that must not move colliders, platforms, enemies or the player.
-  The delivered camera experiment leaves all artwork unchanged. A selective
-  meadow fit was tested and reverted because consistent presentation would
-  require reworking many layers across the levels. Updated assets are needed
-  for a complete 4:3 presentation.
+  The retained separate-camera trial crops 48 decorative leaf objects in Forest
+  Follies without changing their transforms or collision geometry. It helps in
+  some places, but seams remain. Other artwork is unchanged. Updated assets
+  are needed for a complete 4:3 presentation.
 - Keep the current camera positioning; there is no bottom-alignment change.
-- HUD, menus, subtitles, touch anchors and fixed-aspect story scenes have not
-  received the required separate treatment. A death overlay still covers only
-  its original central region. The shared level-camera class also appears in
-  some non-gameplay scenes, so its class name alone is not a full scene filter.
+- The UI camera and canvas reference now cover the full 4:3 display. HUD edge
+  placement and death dimming were observed full-screen. The Video menu adds
+  three persisted mutually exclusive choices with controller and touch handlers.
+  Every subtitle, touch gesture, language and fixed-aspect story scene has not
+  been verified. The shared level-camera class also appears in some non-gameplay
+  scenes. Cropped mode additionally requires a live gameplay Level, preserving
+  original framing elsewhere. Fixed artwork is not stretched to hide limitations.
 - Zoom updates and scene transitions were observed, but all boss phases, plane
   stages, render effects and projection-dependent gameplay consumers have not
   been exhaustively tested. Preserving bounds is evidence, not a complete-game
@@ -97,14 +102,14 @@ was impossible. This investigation supersedes that earlier conclusion.
 
 ## Reproduction and verification
 
-See [probe instructions and source](probe/README.md). The library and metadata
-have independent SHA-256 guards; unknown revisions are refused and an already
+See [patch instructions and source](probe/README.md). The library, metadata and
+modified scene have independent SHA-256 guards; unknown revisions are refused and an already
 patched library is recognized. The reviewed payload contains only newly written
 probe code, with complete C source and linker inputs. It uses shared APK
 repacking, alignment and local signing tools on macOS and Windows.
 
 The original-aspect output previously passed archive and Android-signature
-checks, plus startup through the first playable room. The camera experiment
+checks, plus startup through the first playable room. The display-mode experiment
 was built and signed on macOS, installed to adopted storage, and checked with
 live geometry logs and screenshots. Manual testing continues; it is not a
 production release. No game APK, extracted commercial binary, artwork, signing

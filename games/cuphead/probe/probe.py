@@ -1,4 +1,4 @@
-"""Opt-in ARM64 camera experiment, deliberately outside the game registry."""
+"""Opt-in ARM64 display-mode experiment, outside the normal game registry."""
 from __future__ import annotations
 import argparse
 import hashlib
@@ -17,10 +17,11 @@ from android4x3.signing import align_apk, sign_apk
 ENTRY = 'lib/arm64-v8a/libil2cpp.so'
 METADATA = 'assets/bin/Data/Managed/Metadata/global-metadata.dat'
 SOURCE = '240589d66bc746c4b58c66b227b54fc96990338bb774e59fe6502bcb0ccef420'
-PATCHED = '9fdfa1c84874198c0faa8b3d56b1d0a48c30231372080888ebe3704372f15581'
+PATCHED = 'afff1fbf904e8884e5a16a7fe891abbb4d65e305fa6f15a1d339c0289852df8a'
 META_HASH = '32cf8e85a7a81c3ef57eeec063d6db5a68c82f34c1c79de849817e09c31cc7f2'
-PAYLOAD_HASH = 'a838e9030ca9ed298a35a1daa30afc7fe63dea167a726b3cc5b90864bd6003cc'
-HOOK = 0xa0fc44
+PAYLOAD_HASH = 'cef1edc4064dae578205366b30b49188ede7aeb397d184572cdbdb67c533fd89'
+import json
+HOOKS = json.loads(Path(__file__).with_name('hooks.json').read_text())
 VADDR = 0x2740000
 
 
@@ -43,8 +44,10 @@ def inject(data):
         raise PatchError('Unsupported ARM64 libil2cpp.so; no changes made')
     if data[:6] != b'\x7fELF\x02\x01' or struct.unpack_from('<H', data, 18)[0] != 183:
         raise PatchError('Expected little-endian ARM64 ELF')
-    if data[HOOK:HOOK+4] != bytes.fromhex('01000014'):
-        raise PatchError('Unexpected AbstractCupheadCamera.LateUpdate branch')
+    for hook in HOOKS:
+        address = int(hook['address'], 16)
+        if data[address:address+4] != bytes.fromhex(hook['before']):
+            raise PatchError('Unexpected native hook: ' + hook['symbol'])
     phoff = struct.unpack_from('<Q', data, 32)[0]
     entsize, count = struct.unpack_from('<HH', data, 54)
     if entsize != 56 or count != 6:
@@ -59,10 +62,15 @@ def inject(data):
     # Replace the optional note header; retain every existing load segment/address.
     struct.pack_into('<IIQQQQQQ', result, phoff+notes[0]*entsize,
                      1, 5, offset, VADDR, VADDR, len(code), len(code), 0x10000)
-    delta = VADDR-HOOK
-    if delta % 4 or not -(1<<27) <= delta < (1<<27):
-        raise PatchError('Hook branch is out of range')
-    struct.pack_into('<I', result, HOOK, 0x14000000 | ((delta//4) & 0x3ffffff))
+    for hook in HOOKS:
+        address, target = int(hook['address'], 16), int(hook['target'], 16)
+        if not VADDR <= target < VADDR+len(code):
+            raise PatchError('Hook target outside the reviewed payload')
+        delta = target-address
+        if delta % 4 or not -(1<<27) <= delta < (1<<27):
+            raise PatchError('Hook branch is out of range')
+        opcode = 0x94000000 if hook['link'] else 0x14000000
+        struct.pack_into('<I', result, address, opcode | ((delta//4) & 0x3ffffff))
     result.extend(bytes(offset-len(result)))
     result.extend(code)
     if digest(result) != PATCHED:
@@ -81,8 +89,10 @@ def inspect(source):
             original = archive.read(ENTRY)
         except KeyError as exc:
             raise PatchError('Required ARM64 game entries are missing') from exc
-    result = inject(original)
-    return result, digest(original) == PATCHED
+        result = inject(original)
+        from scene import patch_scene, SCENE
+        scene = patch_scene(archive.read(SCENE))
+    return {ENTRY: result, SCENE: scene}, digest(original) == PATCHED
 
 
 def main(argv=None):
@@ -97,16 +107,19 @@ def main(argv=None):
         if args.output and (args.output.exists() or args.output.resolve() == args.apk.resolve()):
             raise PatchError('Output must be a new file, separate from the source')
         result, already = inspect(args.apk)
-        print('Compatible ARM64 camera probe' + (' (already applied)' if already else ''))
+        print('Compatible ARM64 display-mode patch' + (' (already applied)' if already else ''))
         if args.check:
             return 0
         args.output.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='cuphead-camera-') as folder:
             work = Path(folder)
-            library = work/'libil2cpp.so'
-            library.write_bytes(result)
+            replacements = {}
+            for index, (entry, data) in enumerate(result.items()):
+                path = work/f'entry-{index}'
+                path.write_bytes(data)
+                replacements[entry] = path
             unsigned, aligned, signed = (work/name for name in ('unsigned.apk','aligned.apk','signed.apk'))
-            repack_with_optional_branding(ROOT, args.apk, unsigned, {ENTRY: library})
+            repack_with_optional_branding(ROOT, args.apk, unsigned, replacements)
             align_apk(unsigned, aligned)
             sign_apk(aligned, signed)
             verify_zip(signed, full=True, allow_signatures=True)
@@ -114,7 +127,7 @@ def main(argv=None):
             import shutil
             with signed.open('rb') as src, args.output.open('xb') as dst:
                 shutil.copyfileobj(src, dst, 1024*1024)
-        print('Experimental gameplay APK written. ARMv7 is unchanged; UI is unfinished.')
+        print('Experimental display-mode APK written. ARMv7 is unchanged; artwork limitations remain.')
         return 0
     except (PatchError, OSError, zipfile.BadZipFile, ValueError, KeyError) as exc:
         print(str(exc), file=sys.stderr)

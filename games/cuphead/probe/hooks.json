@@ -1,0 +1,30 @@
+[
+  {
+    "address": "0xa0fc44",
+    "target": "0x27400ec",
+    "symbol": "camera_probe",
+    "before": "01000014",
+    "link": false
+  },
+  {
+    "address": "0xb28364",
+    "target": "0x27408cc",
+    "symbol": "options_update",
+    "before": "e923bc6d",
+    "link": false
+  },
+  {
+    "address": "0xb28e6c",
+    "target": "0x2741158",
+    "symbol": "visual_select",
+    "before": "f44fbea9",
+    "link": false
+  },
+  {
+    "address": "0xa0fe1c",
+    "target": "0x2740000",
+    "symbol": "canvas_reference",
+    "before": "2a672294",
+    "link": true
+  }
+]
