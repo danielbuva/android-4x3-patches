@@ -109,12 +109,14 @@ Android builds, so this repository has no modules for them. GRID Legends is
 deferred because the available source wrapper exited before game startup even
 without a 4:3 modification.
 
-Cuphead 1.0.2 (build 4) is also deferred: a limited ARM64 diagnostic exposed
-fixed-artwork cropping and did not establish a compliant expanded gameplay
-layout. The original-aspect output passed macOS archive/signature checks and
-a limited physical-device startup through the first playable room. The
-diagnostic was rejected and uninstalled. See the [investigation record](games/cuphead/README.md)
-for the input checksum and untested areas.
+Cuphead 1.0.2 (build 4) now has an opt-in ARM64 camera probe. Live A/B geometry
+and screenshots establish unchanged horizontal coverage, proportional rendering
+and one-third more vertical coverage at 1280×960. The overworld also fills 4:3.
+Finite background edges, UI, overlays and full-game compatibility remain
+unfinished. The original-aspect APK and camera experiment were built/signed on
+macOS; commercial-APK rebuilding on Windows and ARMv7 execution are untested.
+See the [investigation record](games/cuphead/README.md) for exact measurements,
+source guards and the limitations of the earlier rejected diagnostic.
 
 ## Release checks
 

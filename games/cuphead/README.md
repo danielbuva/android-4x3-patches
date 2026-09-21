@@ -1,9 +1,9 @@
-# Cuphead — 4:3 conversion deferred
+# Cuphead — expanded gameplay camera experiment
 
-No Cuphead 4:3 patch is registered or released. A camera prototype for the
-build below did not satisfy proportional, uncropped presentation at 1280×960.
-Do not treat a fullscreen Android surface, a taller HUD, or a bordered 16:9
-scene as evidence of a successful gameplay conversion.
+A second ARM64 experiment demonstrates a true 4:3 viewport with the original
+16:9 horizontal world coverage and one-third more vertical coverage. A
+reproducible [opt-in camera probe](probe/README.md) is available. **This is not
+a finished whole-game 4:3 patch** and Cuphead remains outside the normal registry.
 
 ## Investigated source
 
@@ -20,58 +20,100 @@ The checksum identifies the investigated input; it does not establish support
 for this or any other Cuphead APK. Both Windows and macOS launchers reject the
 unregistered package. `--allow-experimental` does not enable Cuphead.
 
-## Specific blockers
+## Camera findings
 
-The shared camera's `UpdateRect` fits a 16:9 viewport to the screen. Ordinary
-level cameras use an orthographic half-height of 360. At the original horizontal
-coverage, a 4:3 view needs a half-height of 480. Changing only the viewport loses
-horizontal content; changing the renderer size alone is insufficient.
+This Android port uses IL2CPP: the relevant Assembly-CSharp classes are compiled
+into `libil2cpp.so`, with names and fields recoverable from IL2CPP metadata.
+Desktop BepInEx plugins cannot simply be installed into this Android build.
 
-Camera dimensions also participate in level tracking and gameplay boundary
-calculations. Those calculations must be separated from display expansion.
-The build additionally has independent initial-camera, map-initialization,
-zoom, cinematic, UI, and special-effect camera paths. One global aspect or
-size replacement does not cover them safely.
+- `AbstractCupheadCamera.UpdateRect` repeatedly fits a 16:9 viewport.
+- `AbstractCupheadGameCamera.set_zoom` sets orthographic size to the camera's
+  base size divided by zoom. The ordinary base is 360; map initialization uses
+  3.6. `Awake` and map `Init` also set size directly.
+- `AbstractCupheadCamera.get_Bounds` and `CalculateContainsBounds` read the
+  actual orthographic size. Merely enlarging that property changes bounds used
+  elsewhere in gameplay, even if width/height getters are left unchanged.
+- `CupheadLevelCamera` is the shared level controller. The inspected camera
+  hierarchy does not define separate run-and-gun, boss and plane subclasses;
+  stage-specific scripts can still change zoom and need further testing.
+- `CupheadMapCamera` has independent initialization and movement. Cutscene and
+  shop cameras have their own classes.
 
-A local ARM64 diagnostic changed the shared viewport, enlarged the zoom-path
-projection without changing the gameplay dimension getters, and adjusted UI
-camera/reference height. A limited physical-device check found:
+The new probe modifies rendering projection each shared `LateUpdate`, after
+original viewport calculation. It preserves horizontal projection (`m00`), sets
+vertical projection (`m11`) from the actual screen aspect, and fills the viewport.
+Stored size, zoom, logical bounds and camera movement remain unchanged. At 4:3
+this is visually equivalent to `orthographicSize * 4/3`, without changing the
+orthographic-size value queried by the game's bounds calculations.
 
-- Title artwork and the opening storybook were cropped. These fixed-aspect
-  presentations need their own proportional fit with borders.
-- The first playable room retained its bordered artwork even while the HUD
-  moved to the bottom of the 4:3 surface. This was not a demonstrated expanded
-  gameplay scene.
-- UI and touch controls did not receive a complete scene-by-scene reflow or
-  alignment verification. No complete-game compatibility claim was made.
+## Measured result
 
-The scene data supplies an additional concrete artwork constraint: the
-serialized tutorial background's front and back layers each have a 665×374
-sprite rectangle, approximately 0.52 pixels per unit, and a cumulative 1.25
-scale. Their initial vertical extent is about 899 world units, less than the
-960-unit view required to preserve horizontal coverage. Simply enlarging the
-camera cannot supply missing artwork. Scaling the artwork to cover that gap
-would require a separate audit of framing and preservation of existing content.
+A live ARM64 comparison at 1280×960 switched the same running level between
+original and expanded projection. In the Forest Follies opening:
 
-These findings block release of the camera prototype under the no-crop,
-no-distortion requirements. They are not a claim that every future port or a
-full scene-by-scene reimplementation is impossible. A future attempt must
-handle fixed-aspect exceptions explicitly, demonstrate genuine expanded
-playable scenes, preserve gameplay boundaries and special camera effects, and
-verify HUD, menus, subtitles, and touch hit regions at the actual display size.
+| Quantity | Original | Expanded |
+|---|---:|---:|
+| Viewport | 1280×720, centered | 1280×960, full screen |
+| Zoom | 0.811 | 0.811 |
+| Stored orthographic size | 443.896423 | 443.896423 |
+| Horizontal world coverage | 1578.298462 | 1578.298462 |
+| Vertical world coverage | 887.792847 | 1183.723877 |
+| Logical bounds width × height | 1578.298462 × 887.792847 | unchanged |
 
-## Verification and disposition
+The horizontal projection coefficient remained `0.001267187`; vertical changed
+from `0.002252778` to `0.001689583`. Horizontal and vertical pixels per world unit
+remain equal. Screenshots showed unchanged character proportions and additional
+vertical scenery, rather than horizontal cropping or a stretched 16:9 frame.
+The overworld also filled 4:3 with additional scenery, confirmed by manual play.
+Map telemetry retained 12.8 world units horizontally while expanding 7.2 to 9.6
+vertically. Default level framing likewise expanded 1280×720 to 1280×960.
 
-The original-aspect output was rebuilt and signed on macOS. Archive integrity,
-Android signature verification, preservation of the game's engine/assets, and
-a limited physical-device startup through the title and first playable room
-were checked. The diagnostic was rejected and removed; it is not a downloadable
-artifact. The final device state contains no installed Cuphead package.
+The first rejected diagnostic missed direct initialization paths and combined
+unrelated UI changes. Its results did **not** establish that expanded gameplay
+was impossible. This investigation supersedes that earlier conclusion.
 
-The diagnostic was exercised only on ARM64. No ARMv7 runtime check, Windows
-Cuphead rebuild, full playthrough, or comprehensive touch/UI verification was
-performed. Shared repository CI does not constitute Cuphead support.
+## Remaining limitations
 
-Only this investigation record is published. No game APK, extracted game
-binary, artwork, signing material, device identifier, or diagnostic patch is
-included.
+- Finite artwork can end inside the taller viewport. The opening meadow exposes
+  its lower edge. Decorative backgrounds may be scaled uniformly and cropped
+  separately, but that must not move colliders, platforms, enemies or the player.
+  The camera-only default leaves artwork unchanged. An optional Forest Follies
+  meadow trial fits one decorative layer; it does not solve every background.
+- Keep the current camera positioning; there is no bottom-alignment change.
+- HUD, menus, subtitles, touch anchors and fixed-aspect story scenes have not
+  received the required separate treatment. A death overlay still covers only
+  its original central region. The shared level-camera class also appears in
+  some non-gameplay scenes, so its class name alone is not a full scene filter.
+- Zoom updates and scene transitions were observed, but all boss phases, plane
+  stages, render effects and projection-dependent gameplay consumers have not
+  been exhaustively tested. Preserving bounds is evidence, not a complete-game
+  behavioral guarantee.
+- A transient `BlurOptimized.OnRenderImage` null-reference error was observed
+  during a transition; attribution to the probe versus the source is unresolved.
+- Only ARM64 device execution was checked. ARMv7 remains unchanged. Windows
+  commercial-APK rebuilding and runtime execution were not tested.
+
+## Reproduction and verification
+
+See [probe instructions and source](probe/README.md). The library and metadata
+have independent SHA-256 guards; unknown revisions are refused and an already
+patched library is recognized. The reviewed payload contains only newly written
+probe code, with complete C source and linker inputs. It uses shared APK
+repacking, alignment and local signing tools on macOS and Windows.
+
+The original-aspect output previously passed archive and Android-signature
+checks, plus startup through the first playable room. The camera experiment
+was built and signed on macOS, installed to adopted storage, and checked with
+live geometry logs and screenshots. Manual testing continues; it is not a
+production release. No game APK, extracted commercial binary, artwork, signing
+material or device identifier is published.
+
+## External references
+
+The [4:3 hex-patch report](https://www.reddit.com/r/crtgaming/comments/1py9193/cuphead_43_fix/)
+identifies the hardcoded aspect constant, but also reports horizontal cropping.
+[Cuphead UltraWide](https://www.nexusmods.com/cuphead/mods/122) identifies camera
+aspect/viewport patch targets and notes finite background artwork.
+[DebugMod CameraZoom](https://github.com/DemoJameson/Cuphead.DebugMod/blob/master/Cuphead.DebugMod/Components/CameraZoom.cs)
+uses the gameplay camera's `Zoom` method. These guided investigation; their
+Windows runtime plugins are not the Android implementation.
