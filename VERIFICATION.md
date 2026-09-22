@@ -63,9 +63,13 @@ The public patch command reproduces the modified APK from the original port,
 rebuilds/aligned-signs it, and verifies all 24 targets. Compatibility uses guarded
 executable instructions, exported native function ranges, resolved movie-state
 loads, immutable render-frame layout, and DEX method/field identities. The APK
-patch does not change the Xbox ISO or extracted assets. A separate optional
-background packer edits four named texture arenas in a new archive copy; no
-commercial or generated game assets are included in the repository.
+patch does not change the Xbox ISO. With `--game-data`, bundled source-dependent
+artwork deltas reconstruct four named texture arenas in a separate archive copy.
+No full archive or standalone background is shipped. Reproduction against the
+original local archive matches the previously device-tested artwork archive
+byte for byte; unrelated members remain identical. Source/output hashes and
+compressed delta checksums fail closed; mixed and already-patched inputs are
+covered, with no archive growth on a second application.
 
 Proprietary-free tests cover ambiguous/unknown/relocated targets, architecture,
 DEX identity, mixed/post states, idempotence, ELF hook integrity, matrix columns,

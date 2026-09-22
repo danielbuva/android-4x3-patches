@@ -44,6 +44,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--unsigned", action="store_true", help="produce an aligned unsigned APK")
     parser.add_argument("--install-adopted", action="store_true", help="install the signed output on the connected device's adopted primary storage")
     parser.add_argument("--device", help="ADB serial for --install-adopted when multiple devices are connected")
+    parser.add_argument("--game-data", type=Path, help="also patch an external game archive with bundled deltas (Skate 3: fedynamic.big)")
+    parser.add_argument("--game-data-output", type=Path, help="output for the patched game archive; defaults beside the output APK")
     parser.add_argument("--keystore", type=Path, help="custom keystore; password comes from ANDROID4X3_KEYSTORE_PASSWORD")
     return parser
 
@@ -127,6 +129,12 @@ def _human(report: dict[str, Any], *, checked: bool) -> str:
         lines.extend(["", "✓ Installed APK and private app data on adopted storage",
                       f"Device: {report['installation']['device']}",
                       f"Data: {report['installation']['data_path']}"])
+    if report.get("game_data"):
+        data = report["game_data"]
+        lines.extend(["", f"Game artwork: {data.get('post_state', data['state'])}"])
+        if data.get("output"):
+            lines.extend([f"Patched game archive: {data['output']}",
+                          "Copy this archive into the extracted game; APK installation does not copy it."])
     return "\n".join(lines)
 
 
@@ -156,6 +164,10 @@ def run(argv: list[str] | None = None) -> int:
         raise PatchError("--install-adopted requires a signed build; it cannot be combined with --unsigned, --check, --dry-run or --list-games")
     if args.device and not args.install_adopted:
         raise PatchError("--device requires --install-adopted")
+    if args.game_data_output and not args.game_data:
+        raise PatchError("--game-data-output requires --game-data")
+    if args.game_data and args.list_games:
+        raise PatchError("--game-data cannot be combined with --list-games")
     repo = _repo_root()
     registry = Registry(repo / "games")
     if args.list_games:
@@ -189,6 +201,13 @@ def run(argv: list[str] | None = None) -> int:
         )
 
     module = _invoke_game(config, "module loading", registry.module, config)
+    game_data = None
+    game_source = None
+    if args.game_data:
+        if not all(callable(getattr(module, name, None)) for name in ("probe_game_data", "patch_game_data")):
+            raise PatchError(f"{config.display_name} does not support --game-data")
+        game_source = args.game_data.expanduser().resolve()
+        game_data = game_source.read_bytes()
     required = tuple(str(value) for value in module.REQUIRED_ENTRIES)
     # Known target-entry names are a performance hint, not a compatibility
     # gate. Unknown builds fall back to exhaustively scanning configured globs.
@@ -217,6 +236,11 @@ def run(argv: list[str] | None = None) -> int:
             raise ReportedPatchError(message, report)
 
         checked = args.check or args.dry_run
+        if game_data is not None:
+            data_probe = _normalize_probe(_invoke_game(config, "game artwork probe", module.probe_game_data, game_data))
+            report["game_data"] = {"input": str(game_source), **data_probe}
+            if data_probe["state"] not in ("original", "patched"):
+                raise ReportedPatchError("game artwork targets were not recognized uniquely", report)
         if checked:
             print(json.dumps(report, indent=2, sort_keys=True) if args.json else _human(report, checked=True))
             return 0
@@ -226,6 +250,13 @@ def run(argv: list[str] | None = None) -> int:
         output = (args.output or _default_output(config)).expanduser().resolve()
         if output == input_apk:
             raise PatchError("input and output APK paths must differ")
+        game_output = None
+        if game_data is not None:
+            game_output = (args.game_data_output or output.with_name(output.stem+"-"+game_source.name)).expanduser().resolve()
+            if output == game_source or game_output in (input_apk, game_source, output):
+                raise PatchError("APK and game-data input/output paths must all differ")
+            if game_output.exists() and not args.force:
+                raise PatchError(f"game-data output exists; use --force to replace it: {game_output}")
         if output.exists() and not args.force:
             raise PatchError(f"output exists; use --force to replace it: {output}")
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -270,6 +301,21 @@ def run(argv: list[str] | None = None) -> int:
             raise PatchError(
                 f"post-patch verification failed: expected patched, got {final_probe['state']}"
             )
+        if game_data is not None:
+            patched_data = _invoke_game(config, "game artwork patch", module.patch_game_data, game_data)
+            data_post = _normalize_probe(_invoke_game(config, "game artwork verification", module.probe_game_data, patched_data))
+            if data_post["state"] != "patched":
+                raise PatchError("game artwork post-patch verification failed")
+            game_output.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(dir=game_output.parent, prefix=".artwork-", delete=False) as staged:
+                staged_path = Path(staged.name)
+                try:
+                    staged.write(patched_data)
+                    staged.close()
+                    os.replace(staged_path, game_output)
+                finally:
+                    staged_path.unlink(missing_ok=True)
+            report["game_data"].update(output=str(game_output), post_state="patched")
         temporary_output = output.with_name(f".{output.name}.tmp")
         shutil.copy2(final_source, temporary_output)
         os.replace(temporary_output, output)

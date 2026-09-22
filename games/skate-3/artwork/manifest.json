@@ -1,0 +1,30 @@
+{
+  "format": "xor-zlib-v1",
+  "description": "Tested 4:3 title outpaint and startup-menu background; source archive required.",
+  "targets": {
+    "data/fe/source/screens/bootflow/pressstart.rx2": {
+      "size": 1295144,
+      "before_sha256": "4d6a945c6c290de3a164a507064514d5fac482f027137dba99fc4216a71c0079",
+      "after_sha256": "1e8c91fb2b6d7911c3b29d46004d9d2c82e387f71e1d5fb9fe162b7abe2bfb31",
+      "delta_sha256": "760bc6f9cd265006c8632d4e155540f72ed9ba7112d89e26c464a6f9b69c579e"
+    },
+    "data/fe/source/screens/demo/pressstart.rx2": {
+      "size": 1295144,
+      "before_sha256": "4efc061840c9c201acf602e0643f24319106a4691d54b57f19cef542fa5ff569",
+      "after_sha256": "24ffa0c69f2c102f0c26aad858e9f388ed337933e373990286c011e201ab9942",
+      "delta_sha256": "760bc6f9cd265006c8632d4e155540f72ed9ba7112d89e26c464a6f9b69c579e"
+    },
+    "data/fe/source/screens/bootflow/welcomescreen.rx2": {
+      "size": 253736,
+      "before_sha256": "e6f44f3070bb1ccec0fef4d5750546bb31e51d2c848527679c02f6a18f9fd945",
+      "after_sha256": "2a0e2a343f24889b0e9bbff6ed0b81483ca721ec62a2aca53c375e44a548bb16",
+      "delta_sha256": "801a25554790376f4d5853d2ff58aa03a0fc97d6cc78a5ceb0da28d5d1cca844"
+    },
+    "data/fe/source/screens/bootflow/coachfrank.rx2": {
+      "size": 297192,
+      "before_sha256": "924363a7f1c3c7831456e9d1d3523bd3beb6b93cd1ba640a14f7f8a7c595e9cc",
+      "after_sha256": "9933ea2f7712689418d7e97614eb324454e3659792698b857d1a32bddcabf752",
+      "delta_sha256": "2970149cc4e29177c72afd1c77d9638a6d4d169c6f7cc132873e3d096f3f98f8"
+    }
+  }
+}

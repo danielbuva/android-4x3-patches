@@ -31,7 +31,7 @@ Reproducible, target-verified patches that adapt selected Android game ports to 
 | Rogue Legacy | `com.roguelegacy.port` | **Experimental:** expanded 1320×990 gameplay and touch space | Centered/animated options, full-height map/stable right-aligned proportional gate/pause dimmer, bottom-docked projectile marker and top-anchored death spotlights, and unobstructed map/legacy pages | 1.4.1-r2 (1) | Semantic managed-code target detection; latest screen-specific refinements await visual confirmation |
 | Sea of Stars | `com.playdigious.seaofstars` | 640×480 renderer with added vertical world view | Edge-to-edge 4:3 UI | 3.0.60158 (60158) | Target-detected |
 | Shin Chan: Shiro & Coal Town | `com.crunchyroll.gv.shinchanshiroandcoal.game` | 4:3 gameplay, title, and menu | Opening movie uses proportional center crop | 1.0.2 (11) | Target-detected |
-| Skate 3 Mobile | `chat.buku.skate3` | **Experimental:** native 4:3 with added vertical world view and matching visibility planes | Grouped perimeter HUD, enlarged startup dialogs, raised name entry, full-screen backdrops, EA-only crop, optional 4:3 artwork; Touch button removed | 2.1.0 (20100) | Guarded ARM64 instructions and semantic DEX detection; opening gameplay checked at 1280×960 |
+| Skate 3 Mobile | `chat.buku.skate3` | **Experimental:** native 4:3 with added vertical world view and matching visibility planes | Grouped perimeter HUD, enlarged startup dialogs, raised name entry, full-screen backdrops, EA-only crop, bundled 4:3 artwork delta; Touch button removed | 2.1.0 (20100) | Guarded ARM64 instructions and semantic DEX detection; opening gameplay checked at 1280×960 |
 | Skul: The Hero Slayer | `com.playdigious.skul` | 640×480 gameplay | 1920×1440 UI/HUD reference | 1.0.13 (66) | Target-detected |
 | STALKER: Call of Pripyat Mobile | `com.Death13.S.T.A.L.K.E.R.CallofPripyat` | **Experimental:** 4:3 render tiers and Vert+ cameras preserving the original 2:1 horizontal view | Main, pause, author UI, resolution labels, and substantially enlarged settings text | 0.3 (1) | Exact per-ABI native and semantic Unity target detection; embedded Russian UI has no safe English switch |
 | Streets of Rage 4 | `com.playdigious.sor4` | Vert+ gameplay with the original horizontal view | 1920×1440 roots/nested canvases, filler removal, centered backgrounds/stage map, bottom-aligned controls and prompts, proportional videos | 1.4.5 (91) | Exact managed + counted named-GUI detection; gameplay verified, latest pre-game placement awaits visual confirmation |
@@ -194,6 +194,21 @@ migrates device-wide storage, uninstalls an app, or clears saves. A signing
 conflict stops installation and retains the finished APK; resolve it using the
 save-backup guidance above. `--check`, `--dry-run`, and `--unsigned` cannot be
 combined with installation.
+
+## External game artwork
+
+Skate 3 stores its frontend artwork in the extracted game, outside the APK.
+Its tested 4:3 backgrounds are bundled as a patch; separate images are not needed:
+
+```sh
+./patch.sh --allow-experimental "Skate3-mobile.apk" --game-data "/path/to/fedynamic.big"
+```
+
+This creates the patched APK and a separate patched archive alongside it. The
+originals remain unchanged. `--game-data-output` selects the archive destination;
+`--check` verifies both inputs without writing. APK installation does not copy
+the archive. Follow the [Skate 3 artwork instructions](games/skate-3/README.md#bundled-43-artwork-patch)
+to back up and replace the device's extracted archive.
 
 ## Troubleshooting
 

@@ -1,4 +1,4 @@
-"""Optional art packer tests use invented archive members and solid textures."""
+"""Artwork delta and custom packer tests use invented members and textures."""
 import importlib.util
 import io
 import struct
@@ -94,3 +94,94 @@ def test_build_refuses_missing_resources_without_changing_input():
     with pytest.raises(ValueError,match='missing'):
         m.build(original,None,None)
     assert bytes(original) == snapshot
+
+
+def data_archive(members):
+    """Invented, uncompressed EB directory; no commercial assets."""
+    count = len(members)
+    names = (48+count*17+15)&~15
+    folders = names+count*64
+    data = bytearray((folders+count*128+63)&~63)
+    data[:4] = b'EB\0\3'
+    struct.pack_into('>IHB',data,4,count,0x10,6)
+    struct.pack_into('>I',data,12,names)
+    data[20:22] = bytes((64,128))
+    for i,(name,body) in enumerate(members.items()):
+        folder,filename = name.rsplit('/',1)
+        n,f = names+i*64,folders+i*128
+        struct.pack_into('>H',data,n,i)
+        data[n+2:n+2+len(filename)] = filename.encode()
+        data[f:f+len(folder)] = folder.encode()
+        struct.pack_into('>III',data,48+i*16,len(data)//64,0,len(body))
+        data.extend(body)
+        data.extend(bytes((-len(data))%64))
+    struct.pack_into('>Q',data,24,len(data))
+    return bytes(data)
+
+
+def synthetic_delta(tmp_path):
+    import json
+    import zlib
+    m = module()
+    original = {name: bytes([20+i])*96 for i,name in enumerate(m.ARTWORK_PATHS)}
+    modified = {name: data[:20]+bytes([80+i])*40+data[60:]
+                for i,(name,data) in enumerate(original.items())}
+    manifest = {'format':'xor-zlib-v1','targets':{}}
+    for name,data in original.items():
+        delta = zlib.compress(bytes(a^b for a,b in zip(data,modified[name])))
+        digest = m.sha256(delta)
+        (tmp_path/(digest+'.xor.zlib')).write_bytes(delta)
+        manifest['targets'][name] = {'size':len(data), 'before_sha256':m.sha256(data),
+                                    'after_sha256':m.sha256(modified[name]), 'delta_sha256':digest}
+    (tmp_path/'manifest.json').write_text(json.dumps(manifest))
+    return m,original,modified,manifest
+
+
+def test_bundled_delta_preserves_other_members_and_handles_mixed_and_post_states(tmp_path):
+    m,original,modified,_ = synthetic_delta(tmp_path)
+    original['other/unrelated.bin'] = b'unrelated user data'
+    raw = data_archive(original)
+    assert m.probe_archive(raw,tmp_path)['state'] == 'original'
+    result = m.patch_archive(raw,tmp_path)
+    actual = {name: result[offset:offset+size] for name,_,_,offset,_,size in m.entries(result)}
+    assert actual == {**original,**modified}
+    assert m.probe_archive(result,tmp_path)['state'] == 'patched'
+    assert m.patch_archive(result,tmp_path) == result  # no repeated appending
+    original[next(iter(modified))] = next(iter(modified.values()))
+    mixed = m.patch_archive(data_archive(original),tmp_path)
+    assert m.probe_archive(mixed,tmp_path)['state'] == 'patched'
+    assert len(raw) < len(result)
+
+
+@pytest.mark.parametrize('damage', ['source','delta','output','size','missing','overlong','trailing'])
+def test_bundled_delta_refuses_mismatch_or_corruption(tmp_path,damage):
+    import json
+    import zlib
+    m,original,modified,manifest = synthetic_delta(tmp_path)
+    name = next(iter(original))
+    spec = manifest['targets'][name]
+    if damage == 'source': original[name] = b'?'*96
+    if damage == 'missing': del original[name]
+    if damage == 'delta': (tmp_path/(spec['delta_sha256']+'.xor.zlib')).write_bytes(b'corrupt')
+    if damage == 'output': spec['after_sha256'] = '0'*64
+    if damage == 'size': spec['size'] += 1
+    if damage in ('overlong','trailing'):
+        payload = zlib.compress(bytes(97 if damage == 'overlong' else 96))
+        if damage == 'trailing': payload += b'junk'
+        spec['delta_sha256'] = m.sha256(payload)
+        (tmp_path/(spec['delta_sha256']+'.xor.zlib')).write_bytes(payload)
+    (tmp_path/'manifest.json').write_text(json.dumps(manifest))
+    with pytest.raises(ValueError,match='Unrecognized|Corrupt|verification|size|missing'):
+        m.patch_archive(data_archive(original),tmp_path)
+
+
+def test_shipped_bundle_integrity_and_bounded_decompression():
+    import json
+    import zlib
+    m = module()
+    manifest = json.loads((m.ARTWORK_DIR/'manifest.json').read_text())
+    assert set(manifest['targets']) == set(m.ARTWORK_PATHS)
+    for spec in manifest['targets'].values():
+        payload = (m.ARTWORK_DIR/(spec['delta_sha256']+'.xor.zlib')).read_bytes()
+        assert m.sha256(payload) == spec['delta_sha256']
+        assert len(zlib.decompress(payload)) == spec['size']
